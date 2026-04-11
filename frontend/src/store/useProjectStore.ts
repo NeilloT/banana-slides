@@ -95,7 +95,7 @@ interface ProjectState {
   setError: (error: string | null) => void;
   
   // 项目操作
-  initializeProject: (type: 'idea' | 'outline' | 'description', content: string, templateImage?: File, templateStyle?: string, referenceFileIds?: string[], aspectRatio?: string) => Promise<void>;
+  initializeProject: (type: 'idea' | 'outline' | 'description', content: string, templateImage?: File, templateStyle?: string, referenceFileIds?: string[], aspectRatio?: string, templateMode?: 'single' | 'multi') => Promise<void>;
   syncProject: (projectId?: string) => Promise<void>;
   
   // 页面操作
@@ -197,7 +197,7 @@ const debouncedUpdatePage = debounce(
   setError: (error) => set({ error }),
 
   // 初始化项目
-  initializeProject: async (type, content, templateImage, templateStyle, referenceFileIds, aspectRatio) => {
+  initializeProject: async (type, content, templateImage, templateStyle, referenceFileIds, aspectRatio, templateMode) => {
     set({ isGlobalLoading: true, error: null });
     try {
       const request: any = {};
@@ -228,7 +228,13 @@ const debouncedUpdatePage = debounce(
         throw new Error(t('store.createNoId'));
       }
 
-      // 2. 关联参考文件到项目（在生成之前，确保 AI 能读取参考文件）
+      // 2. 设置模板模式（前端暂存，后端 API 就绪后再持久化）
+      if (templateMode === 'multi') {
+        // TODO: 后端就绪后改为 api.updateProject(projectId, { template_mode: 'multi' })
+        localStorage.setItem(`template_mode_${projectId}`, 'multi');
+      }
+
+      // 3. 关联参考文件到项目（在生成之前，确保 AI 能读取参考文件）
       if (referenceFileIds && referenceFileIds.length > 0) {
         try {
           await Promise.all(

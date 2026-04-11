@@ -171,6 +171,7 @@ import { listUserTemplates, type UserTemplate } from '@/api/endpoints';
 import { materialUrlToFile } from '@/components/shared/MaterialSelector';
 import type { Material } from '@/api/endpoints';
 import { SlideCard } from '@/components/preview/SlideCard';
+import { PageFineTuneDrawer } from '@/components/preview/PageFineTuneDrawer';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
@@ -206,6 +207,7 @@ export const SlidePreview: React.FC = () => {
   }, [restoreActiveTasks]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isFineTuneDrawerOpen, setIsFineTuneDrawerOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [useTextStyleMode, setUseTextStyleMode] = useState(false);
@@ -1248,6 +1250,21 @@ export const SlidePreview: React.FC = () => {
   );
   const missingImageCount = currentProject.pages.filter(p => !p.generated_image_path).length;
 
+  // Per-page fine-tune drawer — template mode resolves from backend field
+  // (when it lands) or from localStorage fallback set during project creation.
+  const templateMode: 'single' | 'multi' =
+    (currentProject.template_mode as 'single' | 'multi') ||
+    ((projectId && (localStorage.getItem(`template_mode_${projectId}`) as 'single' | 'multi')) || 'single');
+
+  // Fine-tune drawer's page update handler — can't use useCallback here
+  // because the function sits after early returns above. Recreating per
+  // render is fine since the drawer only uses it for blur/click events.
+  const handleDrawerUpdatePage = (updates: Partial<Page>) => {
+    if (selectedPage?.id) {
+      updatePageLocal(selectedPage.id, updates);
+    }
+  };
+
   return (
     <div className="h-screen bg-gray-50 dark:bg-background-primary flex flex-col overflow-hidden">
       {/* 顶栏 */}
@@ -1427,7 +1444,7 @@ export const SlidePreview: React.FC = () => {
       </header>
 
       {/* 主内容区 */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0 min-h-0 relative">
         {/* 左侧：缩略图列表 */}
         <aside className="w-full md:w-80 bg-white dark:bg-background-secondary border-b md:border-b-0 md:border-r border-gray-200 dark:border-border-primary flex flex-col flex-shrink-0">
           <div className="p-3 md:p-4 border-b border-gray-200 dark:border-border-primary flex-shrink-0 space-y-2 md:space-y-3">
@@ -1770,6 +1787,19 @@ export const SlidePreview: React.FC = () => {
             </>
           )}
         </main>
+
+        {/* 右侧精调抽屉 — inline flex child，与预览共享空间并支持左边缘拖拽宽度 */}
+        <PageFineTuneDrawer
+          isOpen={isFineTuneDrawerOpen}
+          onOpen={() => setIsFineTuneDrawerOpen(true)}
+          onClose={() => setIsFineTuneDrawerOpen(false)}
+          page={selectedPage || null}
+          pageIndex={selectedIndex}
+          projectId={projectId || ''}
+          templateMode={templateMode}
+          onUpdatePage={handleDrawerUpdatePage}
+          showToast={(msg, type) => show({ message: msg, type: type || 'info' })}
+        />
       </div>
 
       {/* 编辑对话框 */}

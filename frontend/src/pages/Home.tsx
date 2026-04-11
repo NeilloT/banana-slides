@@ -61,6 +61,11 @@ const homeI18n = {
       template: {
         title: '选择风格模板',
         useTextStyle: '使用文字描述风格',
+        modeLabel: '模板模式',
+        modeSingle: '统一模板',
+        modeSingleDesc: '所有页面使用同一模板',
+        modeMulti: '多模板',
+        modeMultiDesc: '每页使用不同模板',
       },
       actions: {
         selectFile: '选择参考文件',
@@ -137,6 +142,11 @@ const homeI18n = {
       template: {
         title: 'Select Style Template',
         useTextStyle: 'Use text description for style',
+        modeLabel: 'Template Mode',
+        modeSingle: 'Single Template',
+        modeSingleDesc: 'Same template for all pages',
+        modeMulti: 'Multi-Template',
+        modeMultiDesc: 'Different templates per page',
       },
       actions: {
         selectFile: 'Select reference file',
@@ -198,6 +208,7 @@ export const Home: React.FC = () => {
 
   const [useTemplateStyle, setUseTemplateStyle] = useState(false);
   const [templateStyle, setTemplateStyle] = useState('');
+  const [templateMode, setTemplateMode] = useState<'single' | 'multi'>('single');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [isAspectRatioOpen, setIsAspectRatioOpen] = useState(false);
   const [renovationFile, setRenovationFile] = useState<File | null>(null);
@@ -584,7 +595,7 @@ export const Home: React.FC = () => {
         .filter(f => f.parse_status === 'completed')
         .map(f => f.id);
 
-      await initializeProject(activeTab as 'idea' | 'outline' | 'description', content, templateFile || undefined, styleDesc, refFileIds.length > 0 ? refFileIds : undefined, aspectRatio);
+      await initializeProject(activeTab as 'idea' | 'outline' | 'description', content, templateFile || undefined, styleDesc, refFileIds.length > 0 ? refFileIds : undefined, aspectRatio, templateMode);
       
       // 根据类型跳转到不同页面
       const projectId = localStorage.getItem('currentProjectId');
@@ -1085,30 +1096,57 @@ export const Home: React.FC = () => {
                   {t('home.template.title')}
                 </h3>
               </div>
-              {/* 无模板图模式开关 */}
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <span className="text-sm text-gray-600 dark:text-foreground-tertiary group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                  {t('home.template.useTextStyle')}
-                </span>
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={useTemplateStyle}
-                    onChange={(e) => {
-                      setUseTemplateStyle(e.target.checked);
-                      // 切换到无模板图模式时，清空模板选择
-                      if (e.target.checked) {
-                        setSelectedTemplate(null);
-                        setSelectedTemplateId(null);
-                        setSelectedPresetTemplateId(null);
-                      }
-                      // 不再清空风格描述，允许用户保留已输入的内容
-                    }}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 dark:bg-background-hover peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-banana-300 dark:peer-focus:ring-banana/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:after:bg-foreground-secondary after:border-gray-300 dark:after:border-border-hover after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-banana"></div>
+              <div className="flex items-center gap-3">
+                {/* 模板模式切换 */}
+                <div className="flex items-center bg-gray-100 dark:bg-background-hover rounded-lg p-0.5">
+                  <button
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                      templateMode === 'single'
+                        ? 'bg-white dark:bg-background-secondary text-gray-900 dark:text-foreground-primary shadow-sm'
+                        : 'text-gray-500 dark:text-foreground-tertiary hover:text-gray-700 dark:hover:text-foreground-secondary'
+                    }`}
+                    onClick={() => setTemplateMode('single')}
+                    title={t('home.template.modeSingleDesc')}
+                  >
+                    {t('home.template.modeSingle')}
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                      templateMode === 'multi'
+                        ? 'bg-white dark:bg-background-secondary text-gray-900 dark:text-foreground-primary shadow-sm'
+                        : 'text-gray-500 dark:text-foreground-tertiary hover:text-gray-700 dark:hover:text-foreground-secondary'
+                    }`}
+                    onClick={() => setTemplateMode('multi')}
+                    title={t('home.template.modeMultiDesc')}
+                  >
+                    {t('home.template.modeMulti')}
+                  </button>
                 </div>
-              </label>
+                {/* 无模板图模式开关 */}
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <span className="text-sm text-gray-600 dark:text-foreground-tertiary group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                    {t('home.template.useTextStyle')}
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={useTemplateStyle}
+                      onChange={(e) => {
+                        setUseTemplateStyle(e.target.checked);
+                        // 切换到无模板图模式时，清空模板选择
+                        if (e.target.checked) {
+                          setSelectedTemplate(null);
+                          setSelectedTemplateId(null);
+                          setSelectedPresetTemplateId(null);
+                        }
+                        // 不再清空风格描述，允许用户保留已输入的内容
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-background-hover peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-banana-300 dark:peer-focus:ring-banana/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:after:bg-foreground-secondary after:border-gray-300 dark:after:border-border-hover after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-banana"></div>
+                  </div>
+                </label>
+              </div>
             </div>
             
             {/* 根据模式显示不同的内容 */}

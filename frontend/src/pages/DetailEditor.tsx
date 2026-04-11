@@ -626,7 +626,9 @@ export const DetailEditor: React.FC = () => {
               title={!hasAllDescriptions && !isRenovationProcessing ? t('detail.disabledNextTip', { count: missingDescCount }) : undefined}
               className="text-xs md:text-sm"
             >
-              <span className="hidden sm:inline">{t('detail.generateImages')}</span>
+              <span className="hidden sm:inline">
+                {t('detail.generateImages')}
+              </span>
             </Button>
           </div>
         </div>

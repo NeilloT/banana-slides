@@ -1,3 +1,48 @@
+// 模板模式
+export type TemplateMode = 'single' | 'multi';
+
+// 模板解析状态
+export type TemplateAnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+// 模板选择来源
+export type TemplateSelectionSource = 'manual' | 'auto' | 'batch_apply';
+
+// 模板解析结果
+export interface TemplateAnalysisResult {
+  summary: string;
+  template_type: string;
+  layout_structure: string;
+  content_capacity: string;
+  text_regions: Array<{ role: string; count: number }>;
+  image_regions: Array<{ role: string; count: number }>;
+  visual_density: string;
+  style_keywords: string[];
+  notes: string;
+}
+
+// 项目模板资产
+export interface TemplateAsset {
+  id: string;
+  project_id: string;
+  image_url: string;
+  thumb_url?: string;
+  analysis_status: TemplateAnalysisStatus;
+  analysis_json?: TemplateAnalysisResult;
+  analysis_notes?: string;
+  user_label?: string;
+  sort_order: number;
+  created_at: string;
+}
+
+// 模板匹配结果
+export interface TemplateMatchResult {
+  page_id: string;
+  template_asset_id: string | null;
+  status: 'matched' | 'undecided';
+  confidence: number;
+  reason: string;
+}
+
 // 页面状态
 export type PageStatus = 'DRAFT' | 'GENERATING_DESCRIPTION' | 'DESCRIPTION_GENERATED' | 'QUEUED' | 'GENERATING' | 'COMPLETED' | 'FAILED';
 
@@ -51,6 +96,13 @@ export interface Page {
   created_at?: string;
   updated_at?: string;
   image_versions?: ImageVersion[]; // 历史版本列表
+  // 页级模板字段
+  template_asset_id?: string | null;
+  template_style_text?: string | null;
+  template_selection_source?: TemplateSelectionSource | null;
+  template_match_reason?: string | null;
+  template_match_confidence?: number | null;
+  template_image_url?: string | null; // 从 template_asset 计算得到
 }
 
 // 导出设置 - 组件提取方法
@@ -78,6 +130,7 @@ export interface Project {
   export_inpaint_method?: ExportInpaintMethod; // 背景图获取方法
   export_allow_partial?: boolean; // 是否允许返回半成品（导出出错时继续而非停止）
   image_aspect_ratio?: string; // 画面比例（如 16:9, 4:3）
+  template_mode?: TemplateMode; // 模板模式（单模板/多模板）
   status: ProjectStatus;
   pages: Page[];
   created_at: string;
