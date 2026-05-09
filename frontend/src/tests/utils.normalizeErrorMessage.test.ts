@@ -29,4 +29,16 @@ describe('normalizeErrorMessage', () => {
     expect(message).toContain('Codex');
     expect(message).toContain('稍后重试');
   });
+
+  test('does not crash on non-string errors', () => {
+    const message = normalizeErrorMessage({ error: 'boom', status: 500 } as any);
+    expect(typeof message).toBe('string');
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  test('keeps non-codex network failures generic', () => {
+    const message = normalizeErrorMessage("HTTPSConnectionPool(host='api.openai.com', port=443): Max retries exceeded");
+    expect(message).not.toContain('Codex');
+    expect(message).toContain('网络连接中断');
+  });
 });
