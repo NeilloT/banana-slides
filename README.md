@@ -281,7 +281,12 @@ MINIMAX_API_KEY=your-minimax-api-key          # MiniMax
 </details>
 
 
-**使用新版可编辑导出配置方法，获得更好的可编辑导出效果**: 需在[百度智能云平台](https://console.bce.baidu.com/iam/#/iam/apikey/list)（点击此处进入）中获取API KEY，填写在.env文件中的BAIDU_API_KEY字段（有充足的免费使用额度）。详见https://github.com/Anionex/banana-slides/issues/121 中的说明
+**使用新版可编辑导出配置方法，获得更好的可编辑导出效果**：可在「设置 → OCR 配置」中选择 OCR Provider。
+
+- 使用百度：在[百度智能云平台](https://console.bce.baidu.com/iam/#/iam/apikey/list)获取 API Key，填写 `BAIDU_API_KEY`
+- 使用 Azure：配置 `OCR_PROVIDER=azure`，并填写 `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` 与 `AZURE_DOCUMENT_INTELLIGENCE_KEY`
+
+Azure Document Intelligence 在可编辑 PPTX 导出中会额外返回字体族、颜色、粗细等信息，更适合做文字样式还原。
 
 
 <details>

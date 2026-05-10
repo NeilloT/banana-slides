@@ -16,7 +16,7 @@ const settingsI18n = {
         modelConfig: "模型配置", mineruConfig: "MinerU 配置", imageConfig: "图像生成配置",
         performanceConfig: "性能配置", outputLanguage: "输出语言设置",
         textReasoning: "文本推理模式", imageReasoning: "图像推理模式",
-        baiduOcr: "百度配置", serviceTest: "服务测试", lazyllmConfig: "LazyLLM 厂商配置",
+        ocrConfig: "OCR 配置", serviceTest: "服务测试", lazyllmConfig: "LazyLLM 厂商配置",
         vendorApiKeys: "厂商 API Key 配置",
         advancedSettings: "高级设置",
         elevenlabs: "ElevenLabs 语音合成"
@@ -77,8 +77,18 @@ const settingsI18n = {
         textThinkingBudget: "文本思考负载", textThinkingBudgetDesc: "文本推理的思考 token 预算 (1-8192)，数值越大推理越深入",
         enableImageReasoning: "启用图像推理", enableImageReasoningDesc: "开启后，图像生成会使用思考链模式，可能获得更好的构图效果",
         imageThinkingBudget: "图像思考负载", imageThinkingBudgetDesc: "图像推理的思考 token 预算 (1-8192)，数值越大推理越深入",
+        ocrProvider: "OCR Provider",
+        ocrProviderDesc: "可编辑 PPTX 导出时用于识别文本位置与样式的 OCR 后端",
+        ocrProviderBaidu: "百度高精度 OCR",
+        ocrProviderAzure: "Azure Document Intelligence",
         baiduOcrApiKey: "百度 API Key", baiduOcrApiKeyPlaceholder: "输入百度 API Key",
-        baiduOcrApiKeyDesc: "用于可编辑 PPTX 导出时的文字识别功能，留空则保持当前设置不变",
+        baiduOcrApiKeyDesc: "当 OCR Provider 选择百度时用于可编辑 PPTX 导出的文字识别，留空则保持当前设置不变",
+        azureDocIntelEndpoint: "Azure Endpoint",
+        azureDocIntelEndpointPlaceholder: "https://<resource>.cognitiveservices.azure.com",
+        azureDocIntelEndpointDesc: "Azure Document Intelligence 资源地址，用于可编辑 PPTX 的文字与字体识别",
+        azureDocIntelKey: "Azure API Key",
+        azureDocIntelKeyPlaceholder: "输入 Azure API Key",
+        azureDocIntelKeyDesc: "当 OCR Provider 选择 Azure 时生效，留空则保持当前设置不变",
         elevenLabsEnabled: "启用 ElevenLabs 语音合成",
         elevenLabsEnabledDesc: "开启后，视频导出将使用 ElevenLabs 代替 edge-tts 生成旁白音频，音质更自然",
         elevenLabsApiKey: "ElevenLabs API Key", elevenLabsApiKeyPlaceholder: "输入 ElevenLabs API Key",
@@ -117,6 +127,7 @@ const settingsI18n = {
         startTest: "开始测试", testing: "测试中...", testTimeout: "测试超时，请重试", testFailed: "测试失败",
         tests: {
           baiduOcr: { title: "Baidu OCR 服务", description: "识别测试图片文字，验证 BAIDU_API_KEY 配置" },
+          azureOcr: { title: "Azure OCR 服务", description: "识别测试图片文字并返回字体信息，验证 Azure OCR 配置" },
           textModel: { title: "文本生成模型", description: "发送短提示词，验证文本模型与 API 配置" },
           captionModel: { title: "图片识别模型", description: "生成测试图片并请求模型输出描述" },
           baiduInpaint: { title: "Baidu 图像修复", description: "使用测试图片执行修复，验证百度 inpaint 服务" },
@@ -151,7 +162,7 @@ const settingsI18n = {
         modelConfig: "Model Configuration", mineruConfig: "MinerU Configuration", imageConfig: "Image Generation Configuration",
         performanceConfig: "Performance Configuration", outputLanguage: "Output Language Settings",
         textReasoning: "Text Reasoning Mode", imageReasoning: "Image Reasoning Mode",
-        baiduOcr: "Baidu Configuration", serviceTest: "Service Test", lazyllmConfig: "LazyLLM Provider Configuration",
+        ocrConfig: "OCR Configuration", serviceTest: "Service Test", lazyllmConfig: "LazyLLM Provider Configuration",
         vendorApiKeys: "Vendor API Key Configuration",
         advancedSettings: "Advanced Settings",
         elevenlabs: "ElevenLabs Text-to-Speech"
@@ -212,8 +223,18 @@ const settingsI18n = {
         textThinkingBudget: "Text Thinking Budget", textThinkingBudgetDesc: "Token budget for text reasoning (1-8192), higher values enable deeper reasoning",
         enableImageReasoning: "Enable Image Reasoning", enableImageReasoningDesc: "When enabled, image generation uses chain-of-thought mode for better composition",
         imageThinkingBudget: "Image Thinking Budget", imageThinkingBudgetDesc: "Token budget for image reasoning (1-8192), higher values enable deeper reasoning",
+        ocrProvider: "OCR Provider",
+        ocrProviderDesc: "OCR backend used to detect text positions and styles for editable PPTX export",
+        ocrProviderBaidu: "Baidu Accurate OCR",
+        ocrProviderAzure: "Azure Document Intelligence",
         baiduOcrApiKey: "Baidu API Key", baiduOcrApiKeyPlaceholder: "Enter Baidu API Key",
-        baiduOcrApiKeyDesc: "For text recognition in editable PPTX export, leave empty to keep current setting",
+        baiduOcrApiKeyDesc: "Used for editable PPTX export when OCR Provider is set to Baidu. Leave empty to keep current setting",
+        azureDocIntelEndpoint: "Azure Endpoint",
+        azureDocIntelEndpointPlaceholder: "https://<resource>.cognitiveservices.azure.com",
+        azureDocIntelEndpointDesc: "Azure Document Intelligence endpoint for editable PPTX text and font recognition",
+        azureDocIntelKey: "Azure API Key",
+        azureDocIntelKeyPlaceholder: "Enter Azure API Key",
+        azureDocIntelKeyDesc: "Used when OCR Provider is set to Azure. Leave empty to keep current setting",
         elevenLabsEnabled: "Enable ElevenLabs Text-to-Speech",
         elevenLabsEnabledDesc: "When enabled, video export uses ElevenLabs instead of edge-tts for narration audio, providing more natural voice quality",
         elevenLabsApiKey: "ElevenLabs API Key", elevenLabsApiKeyPlaceholder: "Enter ElevenLabs API Key",
@@ -252,6 +273,7 @@ const settingsI18n = {
         startTest: "Start Test", testing: "Testing...", testTimeout: "Test timeout, please retry", testFailed: "Test failed",
         tests: {
           baiduOcr: { title: "Baidu OCR Service", description: "Recognize text in test image, verify BAIDU_API_KEY configuration" },
+          azureOcr: { title: "Azure OCR Service", description: "Recognize text and font info in test image, verify Azure OCR configuration" },
           textModel: { title: "Text Generation Model", description: "Send short prompt to verify text model and API configuration" },
           captionModel: { title: "Image Caption Model", description: "Generate test image and request model to output description" },
           baiduInpaint: { title: "Baidu Image Inpainting", description: "Use test image for inpainting, verify Baidu inpaint service" },
@@ -359,7 +381,10 @@ const initialFormData = {
   text_thinking_budget: 1024,
   enable_image_reasoning: false,
   image_thinking_budget: 1024,
+  ocr_provider: 'baidu' as 'baidu' | 'azure',
   baidu_api_key: '',
+  azure_document_intelligence_endpoint: '',
+  azure_document_intelligence_key: '',
   // LazyLLM 配置
   text_model_source: '',
   image_model_source: '',
@@ -436,7 +461,10 @@ const formDataFromSettings = (data: SettingsType): typeof initialFormData => ({
   text_thinking_budget: data.text_thinking_budget || 1024,
   enable_image_reasoning: data.enable_image_reasoning || false,
   image_thinking_budget: data.image_thinking_budget || 1024,
+  ocr_provider: data.ocr_provider || 'baidu',
   baidu_api_key: '',
+  azure_document_intelligence_endpoint: data.azure_document_intelligence_endpoint || '',
+  azure_document_intelligence_key: '',
   text_model_source: data.text_model_source || '',
   image_model_source: data.image_model_source || '',
   image_caption_model_source: data.image_caption_model_source || '',
@@ -685,9 +713,19 @@ export const Settings: React.FC = () => {
       ],
     },
     {
-      title: t('settings.sections.baiduOcr'),
+      title: t('settings.sections.ocrConfig'),
       icon: <FileText size={20} />,
       fields: [
+        {
+          key: 'ocr_provider',
+          label: t('settings.fields.ocrProvider'),
+          type: 'select',
+          description: t('settings.fields.ocrProviderDesc'),
+          options: [
+            { value: 'baidu', label: t('settings.fields.ocrProviderBaidu') },
+            { value: 'azure', label: t('settings.fields.ocrProviderAzure') },
+          ],
+        },
         {
           key: 'baidu_api_key',
           label: t('settings.fields.baiduOcrApiKey'),
@@ -697,6 +735,24 @@ export const Settings: React.FC = () => {
           lengthKey: 'baidu_api_key_length',
           description: t('settings.fields.baiduOcrApiKeyDesc'),
           link: 'https://console.bce.baidu.com/iam/#/iam/apikey/list',
+        },
+        {
+          key: 'azure_document_intelligence_endpoint',
+          label: t('settings.fields.azureDocIntelEndpoint'),
+          type: 'text',
+          placeholder: t('settings.fields.azureDocIntelEndpointPlaceholder'),
+          description: t('settings.fields.azureDocIntelEndpointDesc'),
+          link: 'https://portal.azure.com/',
+        },
+        {
+          key: 'azure_document_intelligence_key',
+          label: t('settings.fields.azureDocIntelKey'),
+          type: 'password',
+          placeholder: t('settings.fields.azureDocIntelKeyPlaceholder'),
+          sensitiveField: true,
+          lengthKey: 'azure_document_intelligence_key_length',
+          description: t('settings.fields.azureDocIntelKeyDesc'),
+          link: 'https://portal.azure.com/',
         },
       ],
     },
@@ -746,7 +802,7 @@ export const Settings: React.FC = () => {
     setIsSaving(true);
     try {
       const {
-        api_key, mineru_token, baidu_api_key, elevenlabs_api_key, lazyllm_api_keys,
+        api_key, mineru_token, baidu_api_key, azure_document_intelligence_key, elevenlabs_api_key, lazyllm_api_keys,
         text_api_key, image_api_key, image_caption_api_key,
         ...otherData
       } = formData;
@@ -759,6 +815,7 @@ export const Settings: React.FC = () => {
       if (api_key) payload.api_key = api_key;
       if (mineru_token) payload.mineru_token = mineru_token;
       if (baidu_api_key) payload.baidu_api_key = baidu_api_key;
+      if (azure_document_intelligence_key) payload.azure_document_intelligence_key = azure_document_intelligence_key;
       if (elevenlabs_api_key) payload.elevenlabs_api_key = elevenlabs_api_key;
       if (text_api_key) payload.text_api_key = text_api_key;
       if (image_api_key) payload.image_api_key = image_api_key;
@@ -781,7 +838,7 @@ export const Settings: React.FC = () => {
         // Clear all sensitive fields after save
         setFormData(prev => ({
           ...prev,
-          api_key: '', mineru_token: '', baidu_api_key: '', elevenlabs_api_key: '',
+          api_key: '', mineru_token: '', baidu_api_key: '', azure_document_intelligence_key: '', elevenlabs_api_key: '',
           lazyllm_api_keys: {},
           text_api_key: '', image_api_key: '', image_caption_api_key: '',
         }));
@@ -857,7 +914,10 @@ export const Settings: React.FC = () => {
       if (formData.image_caption_model) testSettings.image_caption_model = formData.image_caption_model;
       if (formData.mineru_api_base) testSettings.mineru_api_base = formData.mineru_api_base;
       if (formData.mineru_token) testSettings.mineru_token = formData.mineru_token;
+      if (formData.ocr_provider) testSettings.ocr_provider = formData.ocr_provider;
       if (formData.baidu_api_key) testSettings.baidu_api_key = formData.baidu_api_key;
+      if (formData.azure_document_intelligence_endpoint) testSettings.azure_document_intelligence_endpoint = formData.azure_document_intelligence_endpoint;
+      if (formData.azure_document_intelligence_key) testSettings.azure_document_intelligence_key = formData.azure_document_intelligence_key;
       if (formData.image_resolution) testSettings.image_resolution = formData.image_resolution;
 
       // Per-model provider source overrides (always send, even empty, to clear saved values)
@@ -1525,6 +1585,17 @@ export const Settings: React.FC = () => {
                 resultKey: 'settings.serviceTest.results.recognizedText',
                 action: api.testBaiduOcr,
                 formatDetail: (data: any) => (data?.recognized_text ? t('settings.serviceTest.results.recognizedText', { text: data.recognized_text }) : ''),
+              },
+              {
+                key: 'azure-ocr',
+                titleKey: 'settings.serviceTest.tests.azureOcr.title',
+                descriptionKey: 'settings.serviceTest.tests.azureOcr.description',
+                resultKey: 'settings.serviceTest.results.recognizedText',
+                action: api.testAzureOcr,
+                formatDetail: (data: any) => {
+                  const text = data?.recognized_text ? t('settings.serviceTest.results.recognizedText', { text: data.recognized_text }) : '';
+                  return data?.font_family ? `${text}｜font=${data.font_family}` : text;
+                },
               },
               {
                 key: 'text-model',

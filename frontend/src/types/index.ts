@@ -163,7 +163,10 @@ export interface Settings {
   text_thinking_budget: number;
   enable_image_reasoning: boolean;
   image_thinking_budget: number;
+  ocr_provider?: 'baidu' | 'azure';
   baidu_api_key_length: number;
+  azure_document_intelligence_endpoint?: string;
+  azure_document_intelligence_key_length?: number;
   // LazyLLM 配置
   text_model_source?: string;
   image_model_source?: string;

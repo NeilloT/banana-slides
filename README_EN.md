@@ -293,7 +293,12 @@ MINIMAX_API_KEY=your-minimax-api-key          # MiniMax
 </details>
 
 
-**Use the new editable export configuration method for better results**: You need to obtain an API KEY from the [Baidu AI Cloud Platform](https://console.bce.baidu.com/iam/#/iam/apikey/list) (click here to enter) and fill it into the `BAIDU_API_KEY` field in the `.env` file (there is a sufficient free usage quota). See the instructions in https://github.com/Anionex/banana-slides/issues/121 for more details.
+**Use the new editable export configuration method for better results**: Choose the OCR provider in **Settings → OCR Configuration**.
+
+- For Baidu: get an API key from the [Baidu AI Cloud Platform](https://console.bce.baidu.com/iam/#/iam/apikey/list) and set `BAIDU_API_KEY`
+- For Azure: set `OCR_PROVIDER=azure`, then provide `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY`
+
+Azure Document Intelligence can also return font family, color, and weight metadata during editable PPTX export, which improves style reconstruction.
 
 
 <details>

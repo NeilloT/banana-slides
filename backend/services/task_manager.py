@@ -1550,7 +1550,7 @@ def export_editable_pptx_with_recursive_analysis_task(
             
             # Step 2: 创建文字属性提取器
             from services.image_editability import TextAttributeExtractorFactory
-            text_attribute_extractor = TextAttributeExtractorFactory.create_caption_model_extractor()
+            text_attribute_extractor = TextAttributeExtractorFactory.create_configured_extractor()
             progress_callback("准备", "文字属性提取器已初始化", 5)
             
             # Step 3: 调用导出方法（使用项目的导出设置）

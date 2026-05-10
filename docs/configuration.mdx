@@ -89,13 +89,28 @@ MINERU_API_BASE=https://mineru.net
 MINERU_TOKEN=your-mineru-token
 ```
 
-## Baidu API Key
+## OCR Provider
 
-For enhanced editable PPTX export with OCR-based text extraction, apply for an [IAM API Key](https://console.bce.baidu.com/iam/#/iam/apikey/list) from Baidu Cloud (generous free tier available):
+Editable PPTX export supports two OCR backends:
+
+### Baidu Accurate OCR
+
+Apply for an [IAM API Key](https://console.bce.baidu.com/iam/#/iam/apikey/list) from Baidu Cloud, then configure:
 
 ```env
+OCR_PROVIDER=baidu
 BAIDU_API_KEY=your-baidu-api-key
 ```
+
+### Azure Document Intelligence
+
+```env
+OCR_PROVIDER=azure
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://<resource>.cognitiveservices.azure.com
+AZURE_DOCUMENT_INTELLIGENCE_KEY=your-azure-api-key
+```
+
+Azure OCR can also return font family, color, weight, and italic metadata, which improves editable PPTX text style reconstruction.
 
 ## ElevenLabs (Narration Video TTS)
 

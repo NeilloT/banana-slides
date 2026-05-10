@@ -34,7 +34,7 @@ description: "导出为 PPTX、PDF 或图片"
 提取过程保留字号、颜色、加粗样式、文字定位和表格内容，但受限于 OCR 精度和当前模型能力，复杂排版可能存在偏差，与原图效果有出入。
 
 <Note>
-  配置 `BAIDU_API_KEY` 可获得最佳提取效果，详见[配置说明](/zh/configuration#百度-api-key)。
+  可在全局设置中选择 OCR Provider。若更关注字体样式还原，推荐使用 Azure Document Intelligence；若需要沿用现有百度链路，可继续配置 `BAIDU_API_KEY`。详见[配置说明](/zh/configuration#ocr-provider)。
 </Note>
 
 ## 图标透明背景

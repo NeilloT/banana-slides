@@ -1278,10 +1278,11 @@ export const getElevenLabsVoices = async (): Promise<ApiResponse<{ voices: { id:
  * 更新系统设置
  */
 export const updateSettings = async (
-  data: Partial<Omit<Settings, 'id' | 'api_key_length' | 'mineru_token_length' | 'baidu_api_key_length' | 'elevenlabs_api_key_length' | 'created_at' | 'updated_at'>> & {
+  data: Partial<Omit<Settings, 'id' | 'api_key_length' | 'mineru_token_length' | 'baidu_api_key_length' | 'azure_document_intelligence_key_length' | 'elevenlabs_api_key_length' | 'created_at' | 'updated_at'>> & {
     api_key?: string;
     mineru_token?: string;
     baidu_api_key?: string;
+    azure_document_intelligence_key?: string;
     elevenlabs_api_key?: string;
     text_api_key?: string;
     image_api_key?: string;
@@ -1361,7 +1362,10 @@ export interface TestSettingsOverride {
   image_caption_model_source?: string;
   mineru_api_base?: string;
   mineru_token?: string;
+  ocr_provider?: 'baidu' | 'azure';
   baidu_api_key?: string;
+  azure_document_intelligence_endpoint?: string;
+  azure_document_intelligence_key?: string;
   ai_provider_format?: string;
   image_resolution?: string;
   enable_text_reasoning?: boolean;
@@ -1377,6 +1381,11 @@ export interface TestSettingsOverride {
  */
 export const testBaiduOcr = async (settings?: TestSettingsOverride): Promise<ApiResponse<{ task_id: string; status: string }>> => {
   const response = await apiClient.post<ApiResponse<{ task_id: string; status: string }>>('/api/settings/tests/baidu-ocr', settings || {});
+  return response.data;
+};
+
+export const testAzureOcr = async (settings?: TestSettingsOverride): Promise<ApiResponse<{ task_id: string; status: string }>> => {
+  const response = await apiClient.post<ApiResponse<{ task_id: string; status: string }>>('/api/settings/tests/azure-ocr', settings || {});
   return response.data;
 };
 

@@ -6,10 +6,9 @@ test.describe('Settings page API key labels and links', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('Baidu section title should not contain OCR', async ({ page }) => {
-    const baiduSection = page.locator('h2').filter({ hasText: /百度配置|Baidu Configuration/ });
-    await expect(baiduSection).toBeVisible();
-    await expect(page.locator('h2').filter({ hasText: /百度 OCR 配置|Baidu OCR Configuration/ })).not.toBeVisible();
+  test('OCR section title is clear and visible', async ({ page }) => {
+    const ocrSection = page.locator('h2').filter({ hasText: /OCR 配置|OCR Configuration/ });
+    await expect(ocrSection).toBeVisible();
   });
 
   test('Baidu API Key label should not contain OCR', async ({ page }) => {
@@ -30,9 +29,15 @@ test.describe('Settings page API key labels and links', () => {
     await expect(baiduLink).toHaveAttribute('target', '_blank');
   });
 
+  test('Azure API Key field has portal link', async ({ page }) => {
+    const azureLinks = page.locator('a[href="https://portal.azure.com/"]');
+    await expect(azureLinks.first()).toBeVisible();
+    await expect(azureLinks.first()).toHaveAttribute('target', '_blank');
+  });
+
   test('AIHubMix has apply link', async ({ page }) => {
-    const aihubLink = page.locator('a[href="https://aihubmix.com/token?aff=17EC"]');
-    await expect(aihubLink).toBeVisible();
-    await expect(aihubLink).toHaveAttribute('target', '_blank');
+    const aihubLinks = page.locator('a[href="https://aihubmix.com/?aff=17EC"]');
+    await expect(aihubLinks.first()).toBeVisible();
+    await expect(aihubLinks.first()).toHaveAttribute('target', '_blank');
   });
 });

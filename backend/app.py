@@ -278,6 +278,15 @@ def _load_settings_to_config(app):
         if settings.baidu_api_key:
             app.config['BAIDU_API_KEY'] = settings.baidu_api_key
             logging.info("Loaded BAIDU_API_KEY from settings")
+        if settings.ocr_provider:
+            app.config['OCR_PROVIDER'] = settings.ocr_provider
+            logging.info(f"Loaded OCR_PROVIDER from settings: {settings.ocr_provider}")
+        if settings.azure_document_intelligence_endpoint:
+            app.config['AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT'] = settings.azure_document_intelligence_endpoint
+            logging.info("Loaded AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT from settings")
+        if settings.azure_document_intelligence_key:
+            app.config['AZURE_DOCUMENT_INTELLIGENCE_KEY'] = settings.azure_document_intelligence_key
+            logging.info("Loaded AZURE_DOCUMENT_INTELLIGENCE_KEY from settings")
 
         # Load LazyLLM source settings
         if settings.text_model_source:

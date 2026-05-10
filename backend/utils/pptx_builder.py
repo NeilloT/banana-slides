@@ -432,6 +432,7 @@ class PPTXBuilder:
             is_bold = getattr(text_style, 'is_bold', False)
             is_italic = getattr(text_style, 'is_italic', False)
             is_underline = getattr(text_style, 'is_underline', False)
+        font_family = getattr(text_style, 'font_family', None) if text_style else None
         
         # Make title text bold (legacy behavior)
         if text_level == 1 or text_level == 'title':
@@ -450,6 +451,8 @@ class PPTXBuilder:
                 run.font.size = Pt(font_size)
                 run.font.bold = is_bold
                 run.font.underline = is_underline
+                if font_family:
+                    run.font.name = font_family
                 # Set segment-specific color
                 r, g, b = seg.color_rgb
                 run.font.color.rgb = RGBColor(r, g, b)
@@ -476,6 +479,8 @@ class PPTXBuilder:
             paragraph.font.bold = is_bold
             paragraph.font.italic = is_italic
             paragraph.font.underline = is_underline
+            if font_family:
+                paragraph.font.name = font_family
             
             # Apply single font color if provided
             if text_style and hasattr(text_style, 'font_color_rgb') and text_style.font_color_rgb:
@@ -669,4 +674,3 @@ class PPTXBuilder:
     def get_presentation(self) -> Presentation:
         """Get the current presentation object"""
         return self.prs
-

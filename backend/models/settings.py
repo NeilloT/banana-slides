@@ -42,6 +42,9 @@ class Settings(db.Model):
 
     # 百度 API 配置
     baidu_api_key = db.Column(db.String(500), nullable=True)  # 百度 API Key
+    ocr_provider = db.Column(db.String(20), nullable=True)  # OCR provider: baidu, azure
+    azure_document_intelligence_endpoint = db.Column(db.String(500), nullable=True)
+    azure_document_intelligence_key = db.Column(db.String(500), nullable=True)
 
     # ElevenLabs TTS 配置
     elevenlabs_enabled = db.Column(db.Boolean, nullable=False, default=False)
@@ -110,6 +113,7 @@ class Settings(db.Model):
         api_key = self._val('api_key', d)
         mineru_token = self._val('mineru_token', d)
         baidu_api_key = self._val('baidu_api_key', d)
+        azure_document_intelligence_key = self._val('azure_document_intelligence_key', d)
         elevenlabs_api_key = self._val('elevenlabs_api_key', d)
         text_api_key = self._val('text_api_key', d)
         image_api_key = self._val('image_api_key', d)
@@ -136,7 +140,10 @@ class Settings(db.Model):
             'text_thinking_budget': self.text_thinking_budget,
             'enable_image_reasoning': self.enable_image_reasoning,
             'image_thinking_budget': self.image_thinking_budget,
+            'ocr_provider': self._val('ocr_provider', d) or 'baidu',
             'baidu_api_key_length': len(baidu_api_key) if baidu_api_key else 0,
+            'azure_document_intelligence_endpoint': self._val('azure_document_intelligence_endpoint', d),
+            'azure_document_intelligence_key_length': len(azure_document_intelligence_key) if azure_document_intelligence_key else 0,
             'text_model_source': self._val('text_model_source', d),
             'image_model_source': self._val('image_model_source', d),
             'image_caption_model_source': self._val('image_caption_model_source', d),
@@ -248,6 +255,9 @@ class Settings(db.Model):
             'image_caption_model': Config.IMAGE_CAPTION_MODEL,
             'output_language': Config.OUTPUT_LANGUAGE,
             'baidu_api_key': Config.BAIDU_API_KEY or None,
+            'ocr_provider': getattr(Config, 'OCR_PROVIDER', 'baidu') or 'baidu',
+            'azure_document_intelligence_endpoint': getattr(Config, 'AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT', '') or None,
+            'azure_document_intelligence_key': getattr(Config, 'AZURE_DOCUMENT_INTELLIGENCE_KEY', '') or None,
             'text_model_source': getattr(Config, 'TEXT_MODEL_SOURCE', None),
             'image_model_source': getattr(Config, 'IMAGE_MODEL_SOURCE', None),
             'image_caption_model_source': getattr(Config, 'IMAGE_CAPTION_MODEL_SOURCE', None),

@@ -73,6 +73,7 @@ from .text_attribute_extractors import (
     TextStyleResult,
     TextAttributeExtractor,
     CaptionModelTextAttributeExtractor,
+    AzureOCRTextAttributeExtractor,
     TextAttributeExtractorRegistry
 )
 
@@ -115,6 +116,7 @@ __all__ = [
     'TextStyleResult',
     'TextAttributeExtractor',
     'CaptionModelTextAttributeExtractor',
+    'AzureOCRTextAttributeExtractor',
     'TextAttributeExtractorRegistry',
     # 工厂和配置
     'ExtractorFactory',
@@ -124,4 +126,3 @@ __all__ = [
     # 主服务
     'ImageEditabilityService',
 ]
-

@@ -10,7 +10,12 @@ description: "常见问题解答"
 
 ## 可编辑 PPTX 导出效果不好，文字错位或缺失
 
-通常是 API 配置问题。确保 `BAIDU_API_KEY` 设置正确，详见[配置说明](/zh/configuration#百度-api-key)。
+通常是 OCR API 配置问题。请确认当前选择的 OCR Provider 已正确配置：
+
+- 百度：检查 `BAIDU_API_KEY`
+- Azure：检查 `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` 和 `AZURE_DOCUMENT_INTELLIGENCE_KEY`
+
+详见[配置说明](/zh/configuration#ocr-provider)。
 
 也可以在「**项目设置 → 导出设置**」中调整文本提取方法（OCR / 视觉模型 / 混合），不同模型对不同排版效果差异较大。
 

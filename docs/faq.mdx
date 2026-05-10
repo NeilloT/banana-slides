@@ -10,7 +10,12 @@ description: "Frequently asked questions"
 
 ## Editable PPTX export has overlapping text or missing styles
 
-Usually an API configuration issue. Make sure `BAIDU_API_KEY` is set correctly — see [Configuration](/configuration#baidu-api-key).
+Usually an OCR API configuration issue. Make sure the selected OCR provider is configured correctly:
+
+- Baidu: check `BAIDU_API_KEY`
+- Azure: check `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY`
+
+See [Configuration](/configuration#ocr-provider).
 
 You can also try adjusting the text extraction method in **Project Settings → Export Settings** (OCR / Vision model / Hybrid). Different methods perform differently depending on the layout.
 

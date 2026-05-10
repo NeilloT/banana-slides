@@ -964,6 +964,27 @@ class ExportService:
         logger.info(f"【混合策略】开始分析 {len(editable_images)} 页的文本样式...")
         logger.info(f"  - 全局识别: is_bold, is_italic, is_underline, text_alignment")
         logger.info(f"  - 单个识别: font_color")
+
+        if getattr(text_attribute_extractor, 'prefer_full_image_extraction', False):
+            logger.info("  - 当前提取器支持单次全图样式提取，跳过逐元素裁剪识别")
+            global_results = ExportService._batch_extract_text_styles_with_full_image(
+                editable_images=editable_images,
+                text_attribute_extractor=text_attribute_extractor,
+                max_workers=max_workers,
+            )
+            failed_extractions = []
+
+            all_element_ids = []
+            for editable_img in editable_images:
+                all_element_ids.extend(
+                    item['element_id']
+                    for item in ExportService._collect_text_elements_for_batch_extraction(editable_img.elements)
+                )
+            missing_ids = sorted(set(all_element_ids) - set(global_results.keys()))
+            failed_extractions.extend((element_id, "全图样式提取未返回结果") for element_id in missing_ids)
+
+            logger.info(f"✓ 单次全图样式提取完成: 成功 {len(global_results)} 个, 失败 {len(failed_extractions)} 个")
+            return global_results, failed_extractions
         
         # Step 1: 收集所有文本元素
         all_text_items = []  # 用于单个裁剪识别 (element_id, image_path, content)
@@ -1124,6 +1145,7 @@ class ExportService:
                     is_italic=global_style.is_italic,          # 全局识别的斜体
                     is_underline=global_style.is_underline,    # 全局识别的下划线
                     text_alignment=global_style.text_alignment, # 全局识别的对齐
+                    font_family=global_style.font_family or local_style.font_family,
                     confidence=0.9,
                     metadata={
                         'source': 'hybrid',

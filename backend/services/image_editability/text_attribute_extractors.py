@@ -88,6 +88,9 @@ class TextStyleResult:
     
     # 是否有下划线
     is_underline: bool = False
+
+    # 字体名称（如果可以识别）
+    font_family: Optional[str] = None
     
     # 文字对齐方式 - 可选 ('left', 'center', 'right', 'justify')
     text_alignment: Optional[str] = None
@@ -419,6 +422,7 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
                 is_italic=is_italic,
                 is_underline=is_underline,
                 text_alignment=text_alignment,
+                font_family=result_json.get('font_family'),
                 confidence=0.9,  # 模型返回的结果给予较高置信度
                 metadata={'source': 'caption_model', 'raw_response': result_json}
             )
@@ -574,6 +578,7 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
                     is_italic=is_italic,
                     is_underline=is_underline,
                     text_alignment=text_alignment,
+                    font_family=item.get('font_family'),
                     confidence=0.9,
                     metadata={'source': 'batch_caption_model', 'raw_response': item}
                 )
@@ -584,6 +589,221 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
         
         logger.info(f"批量解析完成: 成功 {len(results)}/{len(original_elements)} 个元素")
         return results
+
+
+class AzureOCRTextAttributeExtractor(TextAttributeExtractor):
+    """
+    基于 Azure OCR 的文字样式提取器
+
+    Azure Document Intelligence 可以直接返回字体、颜色、粗细等属性，
+    因此导出时优先走单次全图识别，避免逐个裁剪重复调用外部 OCR。
+    """
+
+    prefer_full_image_extraction = True
+
+    def __init__(self, ocr_provider):
+        self._ocr_provider = ocr_provider
+
+    def supports_batch(self) -> bool:
+        return True
+
+    def extract(
+        self,
+        image: Union[str, Image.Image],
+        text_content: Optional[str] = None,
+        **kwargs
+    ) -> TextStyleResult:
+        image_path, need_cleanup = self._ensure_image_path(image)
+        try:
+            result = self._ocr_provider.recognize(image_path)
+            return self._build_text_style(
+                matched_lines=result.get('text_lines', []),
+                text_content=text_content,
+            )
+        except Exception as e:
+            logger.error(f"Azure OCR 单图样式提取失败: {e}", exc_info=True)
+            return TextStyleResult(confidence=0.0, metadata={'error': str(e)})
+        finally:
+            self._cleanup_temp_path(image_path, need_cleanup)
+
+    def extract_batch_with_full_image(
+        self,
+        full_image: Union[str, Image.Image],
+        text_elements: List[Dict[str, Any]],
+        **kwargs
+    ) -> Dict[str, TextStyleResult]:
+        image_path, need_cleanup = self._ensure_image_path(full_image)
+        try:
+            result = self._ocr_provider.recognize(image_path)
+            ocr_lines = result.get('text_lines', [])
+            styles = {}
+            for element in text_elements:
+                matched_lines = self._match_lines_to_element(element, ocr_lines)
+                if matched_lines:
+                    styles[element['element_id']] = self._build_text_style(
+                        matched_lines=matched_lines,
+                        text_content=element.get('content'),
+                        element_bbox=element.get('bbox'),
+                    )
+            return styles
+        except Exception as e:
+            logger.error(f"Azure OCR 批量样式提取失败: {e}", exc_info=True)
+            raise RuntimeError(f"Azure OCR 批量样式提取失败: {e}") from e
+        finally:
+            self._cleanup_temp_path(image_path, need_cleanup)
+
+    def _match_lines_to_element(
+        self,
+        element: Dict[str, Any],
+        ocr_lines: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        element_bbox = element.get('bbox', [0, 0, 0, 0])
+        target_text = self._normalize_text(element.get('content', ''))
+        matches = []
+
+        for line in ocr_lines:
+            line_bbox = line.get('bbox', [0, 0, 0, 0])
+            overlap_ratio = self._intersection_ratio(element_bbox, line_bbox)
+            if self._bbox_center_inside(line_bbox, element_bbox):
+                overlap_ratio = max(overlap_ratio, 0.45)
+
+            line_text = self._normalize_text(line.get('text', ''))
+            text_score = 0.0
+            if target_text and line_text:
+                if target_text in line_text:
+                    text_score = 1.0
+                elif line_text in target_text:
+                    text_score = 0.8
+
+            score = overlap_ratio + text_score
+            if score >= 0.45:
+                matches.append((score, line))
+
+        matches.sort(
+            key=lambda item: (
+                item[1].get('bbox', [0, 0, 0, 0])[1],
+                item[1].get('bbox', [0, 0, 0, 0])[0]
+            )
+        )
+        return [line for _, line in matches]
+
+    def _build_text_style(
+        self,
+        matched_lines: List[Dict[str, Any]],
+        text_content: Optional[str] = None,
+        element_bbox: Optional[List[int]] = None,
+    ) -> TextStyleResult:
+        if not matched_lines:
+            return TextStyleResult(confidence=0.0, metadata={'error': 'Azure OCR 未返回匹配文本'})
+
+        font_families: Dict[str, int] = {}
+        font_colors: Dict[str, int] = {}
+        bold_hits = 0
+        italic_hits = 0
+
+        for line in matched_lines:
+            style = line.get('style', {}) or {}
+            font_family = style.get('font_family')
+            if font_family:
+                font_families[font_family] = font_families.get(font_family, 0) + 1
+            font_color = style.get('font_color')
+            if font_color:
+                font_colors[font_color] = font_colors.get(font_color, 0) + 1
+            font_weight = str(style.get('font_weight') or '').lower()
+            if font_weight in {'bold', 'bolder', 'semibold', '600', '700', '800', '900'}:
+                bold_hits += 1
+            font_style = str(style.get('font_style') or '').lower()
+            if font_style == 'italic':
+                italic_hits += 1
+
+        dominant_family = max(font_families, key=font_families.get) if font_families else None
+        dominant_color = max(font_colors, key=font_colors.get) if font_colors else '#000000'
+
+        return TextStyleResult(
+            font_color_rgb=CaptionModelTextAttributeExtractor._hex_to_rgb(dominant_color),
+            is_bold=bold_hits > 0,
+            is_italic=italic_hits > 0,
+            is_underline=False,
+            text_alignment=self._infer_alignment(element_bbox, matched_lines),
+            font_family=dominant_family,
+            confidence=0.95,
+            metadata={
+                'source': 'azure_ocr',
+                'matched_line_count': len(matched_lines),
+                'text_content': text_content,
+            }
+        )
+
+    @staticmethod
+    def _infer_alignment(
+        element_bbox: Optional[List[int]],
+        matched_lines: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        if not element_bbox or not matched_lines:
+            return None
+
+        left_gaps = []
+        right_gaps = []
+        centers = []
+        element_width = max(1, element_bbox[2] - element_bbox[0])
+
+        for line in matched_lines:
+            bbox = line.get('bbox', [0, 0, 0, 0])
+            left_gaps.append(max(0, bbox[0] - element_bbox[0]))
+            right_gaps.append(max(0, element_bbox[2] - bbox[2]))
+            centers.append((bbox[0] + bbox[2]) / 2)
+
+        avg_left = sum(left_gaps) / len(left_gaps)
+        avg_right = sum(right_gaps) / len(right_gaps)
+        avg_center = sum(centers) / len(centers)
+        element_center = (element_bbox[0] + element_bbox[2]) / 2
+
+        if abs(avg_center - element_center) <= element_width * 0.08 and abs(avg_left - avg_right) <= element_width * 0.12:
+            return 'center'
+        if avg_right < element_width * 0.08 and avg_left > element_width * 0.2:
+            return 'right'
+        return 'left'
+
+    @staticmethod
+    def _ensure_image_path(image: Union[str, Image.Image]) -> Tuple[str, bool]:
+        import tempfile
+
+        if isinstance(image, str):
+            return image, False
+
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            image.save(tmp_path)
+        return tmp_path, True
+
+    @staticmethod
+    def _cleanup_temp_path(path: str, should_cleanup: bool) -> None:
+        import os
+
+        if should_cleanup and os.path.exists(path):
+            os.remove(path)
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        return ''.join(text.split()).lower()
+
+    @staticmethod
+    def _intersection_ratio(a: List[int], b: List[int]) -> float:
+        x0 = max(a[0], b[0])
+        y0 = max(a[1], b[1])
+        x1 = min(a[2], b[2])
+        y1 = min(a[3], b[3])
+        if x1 <= x0 or y1 <= y0:
+            return 0.0
+        inter = (x1 - x0) * (y1 - y0)
+        b_area = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+        return inter / b_area
+
+    @staticmethod
+    def _bbox_center_inside(inner: List[int], outer: List[int]) -> bool:
+        center_x = (inner[0] + inner[2]) / 2
+        center_y = (inner[1] + inner[3]) / 2
+        return outer[0] <= center_x <= outer[2] and outer[1] <= center_y <= outer[3]
 
 
 class TextAttributeExtractorRegistry:

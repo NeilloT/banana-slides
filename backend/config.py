@@ -129,6 +129,20 @@ class Config:
     # 百度 API 配置（用于 OCR 和图像修复）
     BAIDU_API_KEY = os.getenv('BAIDU_API_KEY', '') or os.getenv('BAIDU_OCR_API_KEY', '')
 
+    # OCR provider 配置（用于可编辑 PPTX 导出）
+    OCR_PROVIDER = os.getenv('OCR_PROVIDER', 'baidu')
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv('AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT', '')
+    AZURE_DOCUMENT_INTELLIGENCE_KEY = (
+        os.getenv('AZURE_DOCUMENT_INTELLIGENCE_KEY', '')
+        or os.getenv('AZURE_DOCUMENT_INTELLIGENCE_API_KEY', '')
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_API_VERSION = os.getenv(
+        'AZURE_DOCUMENT_INTELLIGENCE_API_VERSION', '2024-11-30'
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_MODEL_ID = os.getenv(
+        'AZURE_DOCUMENT_INTELLIGENCE_MODEL_ID', 'prebuilt-read'
+    )
+
     # TTS 视频导出配置
     TTS_DEFAULT_VOICE_ZH = os.getenv('TTS_DEFAULT_VOICE_ZH', 'zh-CN-XiaoxiaoNeural')
     TTS_DEFAULT_VOICE_EN = os.getenv('TTS_DEFAULT_VOICE_EN', 'en-US-JennyNeural')

@@ -18,6 +18,7 @@ from .inpaint_providers import (
 from .text_attribute_extractors import (
     TextAttributeExtractor,
     CaptionModelTextAttributeExtractor,
+    AzureOCRTextAttributeExtractor,
     TextAttributeExtractorRegistry,
     TextStyleResult
 )
@@ -112,16 +113,16 @@ class ExtractorFactory:
             baidu_ocr_extractor = BaiduOCRElementExtractor(baidu_table_ocr_provider)
             logger.info("✅ 百度表格OCR提取器已创建")
         
-        # 尝试创建百度高精度OCR提取器
+        # 尝试创建文本 OCR 提取器（百度或 Azure）
         baidu_accurate_ocr_extractor = None
         try:
-            from services.ai_providers.ocr import create_baidu_accurate_ocr_provider
-            baidu_accurate_provider = create_baidu_accurate_ocr_provider()
-            if baidu_accurate_provider:
-                baidu_accurate_ocr_extractor = BaiduAccurateOCRElementExtractor(baidu_accurate_provider)
-                logger.info("✅ 百度高精度OCR提取器已创建")
+            from services.ai_providers.ocr import create_text_ocr_provider
+            text_ocr_provider = create_text_ocr_provider()
+            if text_ocr_provider:
+                baidu_accurate_ocr_extractor = BaiduAccurateOCRElementExtractor(text_ocr_provider)
+                logger.info("✅ 文本 OCR 提取器已创建")
         except Exception as e:
-            logger.warning(f"无法初始化百度高精度OCR: {e}")
+            logger.warning(f"无法初始化文本 OCR: {e}")
         
         # 使用注册表的工厂方法创建默认配置
         return ExtractorRegistry.create_default(
@@ -145,10 +146,10 @@ class ExtractorFactory:
         """
         if baidu_accurate_ocr_provider is None:
             try:
-                from services.ai_providers.ocr import create_baidu_accurate_ocr_provider
-                baidu_accurate_ocr_provider = create_baidu_accurate_ocr_provider()
+                from services.ai_providers.ocr import create_text_ocr_provider
+                baidu_accurate_ocr_provider = create_text_ocr_provider()
             except Exception as e:
-                logger.warning(f"无法初始化百度高精度OCR Provider: {e}")
+                logger.warning(f"无法初始化文本 OCR Provider: {e}")
                 return None
         
         if baidu_accurate_ocr_provider is None:
@@ -721,6 +722,41 @@ class TextAttributeExtractorFactory:
         
         logger.info("创建CaptionModelTextAttributeExtractor")
         return CaptionModelTextAttributeExtractor(ai_service, prompt_template)
+
+    @staticmethod
+    def create_configured_extractor(
+        ai_service: Optional[Any] = None,
+        prompt_template: Optional[str] = None
+    ) -> TextAttributeExtractor:
+        """
+        根据当前 OCR 配置创建合适的文字样式提取器。
+
+        - `ocr_provider=azure` 且 Azure 凭证可用时：优先使用 Azure OCR 样式提取
+        - 其他情况：回退到现有 caption model 视觉样式提取
+        """
+        try:
+            from services.ai_providers.ocr import create_text_ocr_provider
+            from config import Config
+            from flask import current_app
+
+            try:
+                provider_name = current_app.config.get('OCR_PROVIDER')
+            except RuntimeError:
+                provider_name = Config.OCR_PROVIDER
+
+            if (provider_name or 'baidu').lower() == 'azure':
+                ocr_provider = create_text_ocr_provider('azure')
+                if ocr_provider is not None:
+                    logger.info("创建 AzureOCRTextAttributeExtractor")
+                    return AzureOCRTextAttributeExtractor(ocr_provider)
+                logger.warning("Azure OCR 未初始化成功，回退到视觉模型样式提取")
+        except Exception as e:
+            logger.warning(f"创建 Azure OCR 样式提取器失败，回退到视觉模型: {e}")
+
+        return TextAttributeExtractorFactory.create_caption_model_extractor(
+            ai_service=ai_service,
+            prompt_template=prompt_template
+        )
     
     @staticmethod
     def create_text_attribute_registry(
@@ -744,7 +780,7 @@ class TextAttributeExtractorFactory:
         """
         # 自动创建提取器
         if caption_extractor is None:
-            caption_extractor = TextAttributeExtractorFactory.create_caption_model_extractor(
+            caption_extractor = TextAttributeExtractorFactory.create_configured_extractor(
                 ai_service=ai_service
             )
         
@@ -763,4 +799,3 @@ class TextAttributeExtractorFactory:
         logger.info("创建TextAttributeExtractorRegistry")
         
         return registry
-

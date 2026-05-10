@@ -468,15 +468,15 @@ def create_hybrid_extractor(
     # 创建百度OCR提取器
     if baidu_ocr_extractor is None:
         try:
-            from services.ai_providers.ocr import create_baidu_accurate_ocr_provider
-            baidu_provider = create_baidu_accurate_ocr_provider()
+            from services.ai_providers.ocr import create_text_ocr_provider
+            baidu_provider = create_text_ocr_provider()
             if baidu_provider is None:
-                logger.warning("无法创建百度高精度OCR Provider")
+                logger.warning("无法创建文本 OCR Provider")
                 return None
             baidu_ocr_extractor = BaiduAccurateOCRElementExtractor(baidu_provider)
-            logger.info("✅ 百度高精度OCR提取器已创建")
+            logger.info("✅ 文本 OCR 提取器已创建")
         except Exception as e:
-            logger.error(f"创建百度高精度OCR提取器失败: {e}")
+            logger.error(f"创建文本 OCR 提取器失败: {e}")
             return None
     
     return HybridElementExtractor(
@@ -485,4 +485,3 @@ def create_hybrid_extractor(
         contain_threshold=contain_threshold,
         intersection_threshold=intersection_threshold
     )
-

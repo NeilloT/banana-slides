@@ -16,6 +16,7 @@ from config import Config, PROJECT_ROOT
 from services.ai_service import AIService
 from services.file_parser_service import FileParserService
 from services.ai_providers.ocr.baidu_accurate_ocr_provider import create_baidu_accurate_ocr_provider
+from services.ai_providers.ocr.azure_document_intelligence_provider import create_azure_document_intelligence_provider
 from services.ai_providers.image.baidu_inpainting_provider import create_baidu_inpainting_provider
 from services.ai_providers import LAZYLLM_VENDORS
 from services.task_manager import task_manager
@@ -115,6 +116,18 @@ def temporary_settings_override(settings_override: dict):
         if settings_override.get("baidu_api_key"):
             original_values["BAIDU_API_KEY"] = current_app.config.get("BAIDU_API_KEY")
             current_app.config["BAIDU_API_KEY"] = settings_override["baidu_api_key"]
+
+        if "ocr_provider" in settings_override:
+            original_values["OCR_PROVIDER"] = current_app.config.get("OCR_PROVIDER")
+            current_app.config["OCR_PROVIDER"] = settings_override["ocr_provider"]
+
+        if settings_override.get("azure_document_intelligence_endpoint"):
+            original_values["AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"] = current_app.config.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
+            current_app.config["AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"] = settings_override["azure_document_intelligence_endpoint"]
+
+        if settings_override.get("azure_document_intelligence_key"):
+            original_values["AZURE_DOCUMENT_INTELLIGENCE_KEY"] = current_app.config.get("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+            current_app.config["AZURE_DOCUMENT_INTELLIGENCE_KEY"] = settings_override["azure_document_intelligence_key"]
 
         if settings_override.get("image_resolution"):
             original_values["DEFAULT_RESOLUTION"] = current_app.config.get("DEFAULT_RESOLUTION")
@@ -307,6 +320,15 @@ def update_settings():
         # Update Baidu OCR configuration
         if "baidu_api_key" in data:
             settings.baidu_api_key = data["baidu_api_key"] or None
+        if "ocr_provider" in data:
+            ocr_provider = (data["ocr_provider"] or "").strip() or None
+            if ocr_provider not in (None, "baidu", "azure"):
+                return bad_request("ocr_provider must be 'baidu' or 'azure'")
+            settings.ocr_provider = ocr_provider
+        if "azure_document_intelligence_endpoint" in data:
+            settings.azure_document_intelligence_endpoint = (data["azure_document_intelligence_endpoint"] or "").strip() or None
+        if "azure_document_intelligence_key" in data:
+            settings.azure_document_intelligence_key = data["azure_document_intelligence_key"] or None
 
         # Update ElevenLabs TTS configuration
         if "elevenlabs_enabled" in data:
@@ -402,6 +424,9 @@ def reset_settings():
         settings.description_extra_fields = None
         settings.image_prompt_extra_fields = None
         settings.baidu_api_key = None
+        settings.ocr_provider = None
+        settings.azure_document_intelligence_endpoint = None
+        settings.azure_document_intelligence_key = None
         settings.elevenlabs_enabled = False
         settings.elevenlabs_api_key = None
         settings.elevenlabs_voice_id = None
@@ -714,6 +739,15 @@ def _sync_settings_to_config(settings: Settings):
     
     # Sync Baidu OCR settings (fall back to Config default when NULL)
     current_app.config["BAIDU_API_KEY"] = settings.baidu_api_key or Config.BAIDU_API_KEY
+    current_app.config["OCR_PROVIDER"] = settings.ocr_provider or Config.OCR_PROVIDER or "baidu"
+    current_app.config["AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"] = (
+        settings.azure_document_intelligence_endpoint or Config.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+    )
+    current_app.config["AZURE_DOCUMENT_INTELLIGENCE_KEY"] = (
+        settings.azure_document_intelligence_key or Config.AZURE_DOCUMENT_INTELLIGENCE_KEY
+    )
+    current_app.config["AZURE_DOCUMENT_INTELLIGENCE_API_VERSION"] = Config.AZURE_DOCUMENT_INTELLIGENCE_API_VERSION
+    current_app.config["AZURE_DOCUMENT_INTELLIGENCE_MODEL_ID"] = Config.AZURE_DOCUMENT_INTELLIGENCE_MODEL_ID
 
     # Sync per-model provider source settings
     for model_type, source_attr in [('TEXT', 'text_model_source'), ('IMAGE', 'image_model_source'), ('IMAGE_CAPTION', 'image_caption_model_source')]:
@@ -795,6 +829,14 @@ def _get_baidu_credentials():
     return api_key
 
 
+def _get_azure_ocr_credentials():
+    endpoint = current_app.config.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") or Config.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+    api_key = current_app.config.get("AZURE_DOCUMENT_INTELLIGENCE_KEY") or Config.AZURE_DOCUMENT_INTELLIGENCE_KEY
+    if not endpoint or not api_key:
+        raise ValueError("未配置 Azure Document Intelligence Endpoint 或 Key")
+    return endpoint, api_key
+
+
 def _create_file_parser():
     """创建 FileParserService 实例，根据 per-model caption 配置解析正确的凭证"""
     from services.ai_providers import LAZYLLM_VENDORS
@@ -872,6 +914,26 @@ def _test_baidu_ocr():
         "recognized_text": recognized_text,
         "words_result_num": result.get("words_result_num", 0),
     }, "百度 OCR 测试成功"
+
+
+def _test_azure_ocr():
+    """测试 Azure OCR 服务"""
+    endpoint, api_key = _get_azure_ocr_credentials()
+    provider = create_azure_document_intelligence_provider(endpoint=endpoint, api_key=api_key)
+    if not provider:
+        raise ValueError("Azure OCR Provider 初始化失败")
+
+    test_image_path = _get_test_image_path()
+    result = provider.recognize(str(test_image_path))
+    recognized_text = provider.get_full_text(result, separator=" ")
+    text_lines = result.get("text_lines", [])
+    sample_style = text_lines[0].get("style", {}) if text_lines else {}
+
+    return {
+        "recognized_text": recognized_text,
+        "words_result_num": len(text_lines),
+        "font_family": sample_style.get("font_family"),
+    }, "Azure OCR 测试成功"
 
 
 def _test_text_model():
@@ -1010,6 +1072,7 @@ def _test_mineru_pdf():
 # 测试函数映射
 TEST_FUNCTIONS = {
     "baidu-ocr": _test_baidu_ocr,
+    "azure-ocr": _test_azure_ocr,
     "text-model": _test_text_model,
     "caption-model": _test_caption_model,
     "baidu-inpaint": _test_baidu_inpaint,
@@ -1127,6 +1190,12 @@ def run_settings_test(test_name: str):
             test_settings["mineru_token"] = global_settings.mineru_token
         if global_settings.baidu_api_key:
             test_settings["baidu_api_key"] = global_settings.baidu_api_key
+        if global_settings.ocr_provider:
+            test_settings["ocr_provider"] = global_settings.ocr_provider
+        if global_settings.azure_document_intelligence_endpoint:
+            test_settings["azure_document_intelligence_endpoint"] = global_settings.azure_document_intelligence_endpoint
+        if global_settings.azure_document_intelligence_key:
+            test_settings["azure_document_intelligence_key"] = global_settings.azure_document_intelligence_key
         if global_settings.image_resolution:
             test_settings["image_resolution"] = global_settings.image_resolution
         # 推理模式设置
