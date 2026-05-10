@@ -11,6 +11,8 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
+from pptx.oxml.ns import qn
+from pptx.oxml.xmlchemy import OxmlElement
 from PIL import Image, ImageFont, ImageDraw
 from html.parser import HTMLParser
 
@@ -90,6 +92,21 @@ class PPTXBuilder:
     
     # Font cache: {size_pt: ImageFont}
     _font_cache: Dict[float, ImageFont.FreeTypeFont] = {}
+
+    @staticmethod
+    def _apply_font_family_to_run(run, font_family: Optional[str]) -> None:
+        """Apply font family to both Latin and East Asian typefaces."""
+        if not font_family:
+            return
+
+        run.font.name = font_family
+        run_properties = run._r.get_or_add_rPr()
+        for tag_name in ("a:latin", "a:ea"):
+            font_node = run_properties.find(qn(tag_name))
+            if font_node is None:
+                font_node = OxmlElement(tag_name)
+                run_properties.append(font_node)
+            font_node.set("typeface", font_family)
     
     @classmethod
     def _get_font(cls, size_pt: float) -> Optional[ImageFont.FreeTypeFont]:
@@ -451,8 +468,7 @@ class PPTXBuilder:
                 run.font.size = Pt(font_size)
                 run.font.bold = is_bold
                 run.font.underline = is_underline
-                if font_family:
-                    run.font.name = font_family
+                self._apply_font_family_to_run(run, font_family)
                 # Set segment-specific color
                 r, g, b = seg.color_rgb
                 run.font.color.rgb = RGBColor(r, g, b)
@@ -475,17 +491,21 @@ class PPTXBuilder:
             # IMPORTANT: Re-get paragraph after setting text_frame.text
             # because setting text_frame.text creates a new paragraph object
             paragraph = text_frame.paragraphs[0]
-            paragraph.font.size = Pt(font_size)
-            paragraph.font.bold = is_bold
-            paragraph.font.italic = is_italic
-            paragraph.font.underline = is_underline
-            if font_family:
-                paragraph.font.name = font_family
+            if paragraph.runs:
+                run = paragraph.runs[0]
+            else:
+                run = paragraph.add_run()
+                run.text = actual_text
+            run.font.size = Pt(font_size)
+            run.font.bold = is_bold
+            run.font.italic = is_italic
+            run.font.underline = is_underline
+            self._apply_font_family_to_run(run, font_family)
             
             # Apply single font color if provided
             if text_style and hasattr(text_style, 'font_color_rgb') and text_style.font_color_rgb:
                 r, g, b = text_style.font_color_rgb
-                paragraph.font.color.rgb = RGBColor(r, g, b)
+                run.font.color.rgb = RGBColor(r, g, b)
             
             style_info = f" | color={text_style.font_color_rgb if text_style else 'default'}"
         

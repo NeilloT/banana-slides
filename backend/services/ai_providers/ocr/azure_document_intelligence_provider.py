@@ -8,7 +8,7 @@ Uses Azure AI Document Intelligence prebuilt OCR models to extract:
 """
 import logging
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 class AzureDocumentIntelligenceOCRProvider:
     """Azure OCR provider for editable PPTX export."""
+
+    IN_PROGRESS_STATUSES = {"running", "notstarted"}
 
     def __init__(
         self,
@@ -73,32 +75,28 @@ class AzureDocumentIntelligenceOCRProvider:
             "features": "styleFont",
             "stringIndexType": "UnicodeCodePoint",
         }
-        headers = {
-            "Ocp-Apim-Subscription-Key": self.api_key,
-            "Content-Type": "application/octet-stream",
-        }
+        with requests.Session() as session:
+            session.headers.update({"Ocp-Apim-Subscription-Key": self.api_key})
+            response = session.post(
+                analyze_url,
+                params=params,
+                headers={"Content-Type": "application/octet-stream"},
+                data=image_bytes,
+                timeout=60,
+            )
+            response.raise_for_status()
 
-        response = requests.post(
-            analyze_url,
-            params=params,
-            headers=headers,
-            data=image_bytes,
-            timeout=60,
-        )
-        response.raise_for_status()
+            operation_location = response.headers.get("operation-location")
+            if not operation_location:
+                raise RuntimeError("Azure OCR response missing operation-location header")
 
-        operation_location = response.headers.get("operation-location")
-        if not operation_location:
-            raise RuntimeError("Azure OCR response missing operation-location header")
+            return self._poll_result(session, operation_location)
 
-        return self._poll_result(operation_location)
-
-    def _poll_result(self, operation_location: str) -> Dict[str, Any]:
-        headers = {"Ocp-Apim-Subscription-Key": self.api_key}
+    def _poll_result(self, session: requests.Session, operation_location: str) -> Dict[str, Any]:
         deadline = time.time() + self.max_poll_seconds
 
         while time.time() < deadline:
-            response = requests.get(operation_location, headers=headers, timeout=60)
+            response = session.get(operation_location, timeout=60)
             response.raise_for_status()
             payload = response.json()
             status = (payload.get("status") or "").lower()
@@ -108,6 +106,8 @@ class AzureDocumentIntelligenceOCRProvider:
             if status == "failed":
                 message = self._extract_error_message(payload)
                 raise RuntimeError(f"Azure OCR analyze failed: {message}")
+            if status not in self.IN_PROGRESS_STATUSES:
+                raise RuntimeError(f"Azure OCR analyze returned unexpected status: {status or 'unknown'}")
 
             time.sleep(self.poll_interval_seconds)
 
@@ -148,10 +148,10 @@ class AzureDocumentIntelligenceOCRProvider:
                 line_words = []
 
                 for word in page.get("words", []) or []:
+                    if not self._word_belongs_to_line(word, line_spans, bbox, scale_x, scale_y):
+                        continue
                     word_polygon = word.get("polygon", [])
                     word_bbox = self._polygon_to_bbox(word_polygon, scale_x, scale_y)
-                    if not self._bbox_overlaps(bbox, word_bbox):
-                        continue
 
                     word_style = self._resolve_style(word.get("span"), style_ranges)
                     line_words.append({
@@ -287,6 +287,41 @@ class AzureDocumentIntelligenceOCRProvider:
     @staticmethod
     def _bbox_overlaps(a: List[int], b: List[int]) -> bool:
         return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
+
+    @classmethod
+    def _word_belongs_to_line(
+        cls,
+        word: Dict[str, Any],
+        line_spans: List[Dict[str, Any]],
+        line_bbox: List[int],
+        scale_x: float,
+        scale_y: float,
+    ) -> bool:
+        word_span = word.get("span")
+        if word_span and line_spans:
+            return cls._span_within_line_spans(word_span, line_spans)
+
+        word_polygon = word.get("polygon", [])
+        word_bbox = cls._polygon_to_bbox(word_polygon, scale_x, scale_y)
+        return cls._bbox_overlaps(line_bbox, word_bbox)
+
+    @staticmethod
+    def _span_within_line_spans(word_span: Dict[str, Any], line_spans: List[Dict[str, Any]]) -> bool:
+        start = word_span.get("offset")
+        length = word_span.get("length")
+        if start is None or length is None:
+            return False
+
+        end = start + length
+        for line_span in line_spans:
+            line_start = line_span.get("offset")
+            line_length = line_span.get("length")
+            if line_start is None or line_length is None:
+                continue
+            line_end = line_start + line_length
+            if line_start <= start and end <= line_end:
+                return True
+        return False
 
 
 def create_azure_document_intelligence_provider(
