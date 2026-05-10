@@ -17,6 +17,29 @@ from services.prompts import get_text_attribute_extraction_prompt
 logger = logging.getLogger(__name__)
 
 
+def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+    """
+    将十六进制颜色转换为 RGB 元组。
+
+    支持 `#RRGGBB`、`RRGGBB` 和 `#RGB` 简写格式。
+    """
+    hex_color = hex_color.lstrip('#')
+
+    if len(hex_color) == 3:
+        hex_color = ''.join(c * 2 for c in hex_color)
+
+    if len(hex_color) != 6:
+        return (0, 0, 0)
+
+    try:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return (r, g, b)
+    except ValueError:
+        return (0, 0, 0)
+
+
 @dataclass
 class ColoredSegment:
     """
@@ -47,16 +70,7 @@ class ColoredSegment:
         
         # 解析颜色
         if isinstance(color, str):
-            color = color.lstrip('#')
-            if len(color) == 3:
-                color = ''.join(c * 2 for c in color)
-            try:
-                r = int(color[0:2], 16)
-                g = int(color[2:4], 16)
-                b = int(color[4:6], 16)
-                color_rgb = (r, g, b)
-            except (ValueError, IndexError):
-                color_rgb = (0, 0, 0)
+            color_rgb = hex_to_rgb(color)
         else:
             color_rgb = (0, 0, 0)
         return cls(text=text, color_rgb=color_rgb, is_latex=is_latex)
@@ -337,35 +351,6 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
     
-    @staticmethod
-    def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
-        """
-        将十六进制颜色转换为RGB元组
-        
-        Args:
-            hex_color: 十六进制颜色，如 "#FF6B6B" 或 "FF6B6B"
-        
-        Returns:
-            RGB元组 (R, G, B)
-        """
-        # 移除 # 前缀
-        hex_color = hex_color.lstrip('#')
-        
-        # 处理简写格式 (如 #FFF -> #FFFFFF)
-        if len(hex_color) == 3:
-            hex_color = ''.join(c * 2 for c in hex_color)
-        
-        if len(hex_color) != 6:
-            return (0, 0, 0)  # 无效格式，返回黑色
-        
-        try:
-            r = int(hex_color[0:2], 16)
-            g = int(hex_color[2:4], 16)
-            b = int(hex_color[4:6], 16)
-            return (r, g, b)
-        except ValueError:
-            return (0, 0, 0)
-    
     def _parse_result(self, result_json: Dict[str, Any]) -> TextStyleResult:
         """
         解析AI返回的JSON结果
@@ -401,7 +386,7 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
                 # 兼容旧格式
                 font_color_hex = result_json.get('font_color', '#000000')
                 if isinstance(font_color_hex, str):
-                    font_color_rgb = self._hex_to_rgb(font_color_hex)
+                    font_color_rgb = hex_to_rgb(font_color_hex)
                 else:
                     font_color_rgb = (0, 0, 0)
             
@@ -558,7 +543,7 @@ class CaptionModelTextAttributeExtractor(TextAttributeExtractor):
                 # 解析颜色（十六进制格式）
                 font_color_hex = item.get('font_color', '#000000')
                 if isinstance(font_color_hex, str):
-                    font_color_rgb = self._hex_to_rgb(font_color_hex)
+                    font_color_rgb = hex_to_rgb(font_color_hex)
                 else:
                     font_color_rgb = (0, 0, 0)
                 
@@ -720,7 +705,7 @@ class AzureOCRTextAttributeExtractor(TextAttributeExtractor):
         dominant_color = max(font_colors, key=font_colors.get) if font_colors else '#000000'
 
         return TextStyleResult(
-            font_color_rgb=CaptionModelTextAttributeExtractor._hex_to_rgb(dominant_color),
+            font_color_rgb=hex_to_rgb(dominant_color),
             is_bold=bold_hits > 0,
             is_italic=italic_hits > 0,
             is_underline=False,

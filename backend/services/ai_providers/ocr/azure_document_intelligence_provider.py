@@ -41,7 +41,7 @@ class AzureDocumentIntelligenceOCRProvider:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=0.5, min=1, max=5),
-        retry=retry_if_exception_type((requests.exceptions.RequestException, Exception)),
+        retry=retry_if_exception_type((requests.exceptions.RequestException, TimeoutError)),
         reraise=True,
     )
     def recognize(self, image_path: str) -> Dict[str, Any]:
