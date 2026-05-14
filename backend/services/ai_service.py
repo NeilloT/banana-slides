@@ -465,11 +465,22 @@ class AIService:
             if current_page is None:
                 return None
 
-            if stripped in ('**大纲要点：**', '**大纲要点:**', '**Outline Points:**', '**Outline Points：**'):
+            marker = stripped.strip('*_').strip().lower().replace('：', ':')
+            if (
+                marker == '<!-- outline_points -->'
+                or marker in ('大纲要点:', 'outline points:')
+                or '大纲要点' in marker
+                or 'outline points' in marker
+            ):
                 current_mode = 'points'
                 return None
 
-            if stripped in ('**页面描述：**', '**页面描述:**', '**Page Description:**', '**Page Description：**'):
+            if (
+                marker == '<!-- page_description -->'
+                or marker in ('页面描述:', 'page description:')
+                or '页面描述' in marker
+                or 'page description' in marker
+            ):
                 current_mode = 'description'
                 return None
 

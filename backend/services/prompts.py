@@ -458,22 +458,23 @@ The user has provided the following description text:
 
 Your task is to first split the description into pages, then produce the outline and the page description for each page from that same split.
 Each output page must contain both the outline points and the page description. The page count is defined by your page split; do not run a separate outline-only split.
+The parser depends on the HTML comment markers below. Do not translate or modify them.
 
 Output rules:
 - Use `# Part Name` for major sections (only if the text has clear parts/chapters)
 - Use `## Page Title` for each page
-- Under each page, output `**大纲要点：**` followed by `- ` bullet points. If the requested output language is English, use `**Outline Points:**` instead.
-- Then output `**页面描述：**` followed by the corresponding page description text. If the requested output language is English, use `**Page Description:**` instead.
+- Under each page, output `<!-- OUTLINE_POINTS -->` followed by `- ` bullet points
+- Then output `<!-- PAGE_DESCRIPTION -->` followed by the corresponding page description text
 - Preserve layout, style, material, and content details in the page description
 - Use `<!-- PAGE_END -->` after each page
 - Do NOT wrap in code blocks or add any extra text
 
 Example:
 ## 标题
-**大纲要点：**
+<!-- OUTLINE_POINTS -->
 - 要点一
 - 要点二
-**页面描述：**
+<!-- PAGE_DESCRIPTION -->
 页面标题：标题
 
 页面文字：

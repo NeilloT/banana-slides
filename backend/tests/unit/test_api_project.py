@@ -113,10 +113,10 @@ class TestProjectOutlineStream:
             def generate_text_stream(self, prompt, thinking_budget=0):
                 yield (
                     '## 第一页\n'
-                    '**大纲要点:**\n'
+                    '<!-- OUTLINE_POINTS -->\n'
                     '- 背景\n'
                     '- 目标\n'
-                    '**页面描述:**\n'
+                    '<!-- PAGE_DESCRIPTION -->\n'
                     '页面标题：第一页\n\n'
                     '页面文字：\n'
                     '- 背景和目标\n'
