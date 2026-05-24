@@ -151,7 +151,7 @@
 
 ## 🔥 近期更新
 - [2026-04-25]： 素材工具箱上线 — 在原有素材生成基础上新增整图编辑、框选编辑（overlay/replace）、智能擦除三种模式，统一入口一站式操作
-- [2026-04-25]：支持通过 OpenAI 官方 OAuth 登录绑定账号，绑定后可直接使用 Codex 作为文本/图片生成 provider，无需手动填写 API Key（基于 OpenAI 官方 OAuth PKCE 授权流程，非逆向）
+- [2026-04-25]：支持通过 OpenAI 官方 OAuth 登录绑定账号，绑定后可直接使用 Codex 作为文本/图片生成 provider，无需手动填写 API Key（[教程](https://ziy68cvfvu3.feishu.cn/wiki/LDSOwPzkhiNonkkNTF1ct2VBnNc))（基于 OpenAI 官方 OAuth PKCE 授权流程，非逆向）
 - [2026-04-25]：支持保存自定义文字风格描述模板，可命名、标色、持久化复用，无需每次重新输入
 - [2026-04-23]：支持了gpt-image-2模型，同时导出可编辑背景效果也因模型能力升级得到了提升（在 设置-导出选项-背景获取 选择 生成式获取）
 - [2026-04-11]：支持了[cli操作并加入了agent skills](https://docs.bananaslides.online/cli)
