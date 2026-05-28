@@ -1149,30 +1149,39 @@ def generate_template_candidates_task(task_id: str, style_prompt: str, prompt: s
                 )
 
             def generate_candidate(index: int):
-                candidate_prompt = build_candidate_prompt(index)
-                candidate_id = f'candidate-{index + 1}'
+                with app.app_context():
+                    candidate_prompt = build_candidate_prompt(index)
+                    candidate_id = f'candidate-{index + 1}'
 
-                if use_mock:
-                    image = Image.new('RGB', (1600, 900), color=(245, 247, 250))
-                    draw = ImageDraw.Draw(image)
-                    accent = [(37, 99, 235), (14, 116, 144), (147, 51, 234), (234, 88, 12), (22, 163, 74)][index % 5]
-                    draw.rectangle([0, 0, 1600, 230], fill=accent)
-                    draw.rounded_rectangle([120, 330, 1480, 790], radius=36, fill=(255, 255, 255))
-                    draw.text((160, 95), f"Mock Template Candidate {index + 1}", fill=(255, 255, 255))
+                    if use_mock:
+                        image = Image.new('RGB', (1600, 900), color=(245, 247, 250))
+                        draw = ImageDraw.Draw(image)
+                        accent = [
+                            (37, 99, 235),
+                            (14, 116, 144),
+                            (147, 51, 234),
+                            (234, 88, 12),
+                            (22, 163, 74),
+                        ][index % 5]
+                        draw.rectangle([0, 0, 1600, 230], fill=accent)
+                        draw.rounded_rectangle([120, 330, 1480, 790], radius=36, fill=(255, 255, 255))
+                        draw.text((160, 95), f"Mock Template Candidate {index + 1}", fill=(255, 255, 255))
+                        return index, candidate_id, image
+
+                    logger.info("🎨 Generating template candidate %s/%s for task %s", index + 1, count, task_id)
+                    with image_resource_limiter.slot(f"template-candidate task={task_id} index={index + 1}"):
+                        image = ai_service.generate_image(
+                            prompt=candidate_prompt,
+                            aspect_ratio=aspect_ratio,
+                            resolution=resolution,
+                        )
+
+                    if not image:
+                        raise ValueError(
+                            f"Image provider returned no image for candidate {index + 1}"
+                        )
+
                     return index, candidate_id, image
-
-                logger.info("🎨 Generating template candidate %s/%s for task %s", index + 1, count, task_id)
-                with image_resource_limiter.slot(f"template-candidate task={task_id} index={index + 1}"):
-                    image = ai_service.generate_image(
-                        prompt=candidate_prompt,
-                        aspect_ratio=aspect_ratio,
-                        resolution=resolution,
-                    )
-
-                if not image:
-                    raise ValueError(f"Image provider returned no image for candidate {index + 1}")
-
-                return index, candidate_id, image
 
             task.status = 'PROCESSING'
             task.set_progress({

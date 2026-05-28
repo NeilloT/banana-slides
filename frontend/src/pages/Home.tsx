@@ -216,6 +216,7 @@ export const Home: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const themeMenuRef = useRef<HTMLDivElement>(null);
   const candidatePollActiveRef = useRef(false);
+  const loadingCandidateIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -534,10 +535,12 @@ export const Home: React.FC = () => {
   const handleTemplateSelect = async (templateFile: File | null, templateId?: string) => {
     // 总是设置文件（如果提供）
     if (templateFile) {
+      loadingCandidateIdRef.current = null;
       setSelectedTemplate(templateFile);
       setSelectedCandidateFile(null);
       setSelectedCandidateId(null);
     } else if (templateId) {
+      loadingCandidateIdRef.current = null;
       setSelectedTemplate(null);
       setSelectedCandidateFile(null);
       setSelectedCandidateId(null);
@@ -589,6 +592,7 @@ export const Home: React.FC = () => {
     setTemplateCandidates([]);
     setSelectedCandidateId(null);
     setSelectedCandidateFile(null);
+    loadingCandidateIdRef.current = null;
     setCandidateProgress({ total: 5, completed: 0 });
     try {
       const response = await createTemplateCandidates(trimmedPrompt, 5, aspectRatio);
@@ -656,28 +660,23 @@ export const Home: React.FC = () => {
   const handleSelectTemplateCandidate = async (candidate: TemplateCandidate) => {
     try {
       setSelectedCandidateId(candidate.candidate_id);
+      loadingCandidateIdRef.current = candidate.candidate_id;
       const file = await dataUrlToFile(candidate.image_url, candidate.candidate_id);
 
-      setSelectedCandidateId(currentId => {
-        if (currentId === candidate.candidate_id) {
-          setSelectedCandidateFile(file);
-          setSelectedTemplate(file);
-          setSelectedTemplateId(null);
-          setSelectedPresetTemplateId(null);
-          show({ message: '已选择模板候选，创建项目后会走现有模板上传流程', type: 'success' });
-        }
-        return currentId;
-      });
+      if (loadingCandidateIdRef.current === candidate.candidate_id) {
+        setSelectedCandidateFile(file);
+        setSelectedTemplate(file);
+        setSelectedTemplateId(null);
+        setSelectedPresetTemplateId(null);
+        show({ message: '已选择模板候选，创建项目后会走现有模板上传流程', type: 'success' });
+      }
     } catch (error: any) {
       console.error('应用模板候选失败:', error);
-      setSelectedCandidateId(currentId => {
-        if (currentId === candidate.candidate_id) {
-          setSelectedCandidateFile(null);
-          show({ message: `应用模板候选失败: ${error?.message || '未知错误'}`, type: 'error' });
-          return null;
-        }
-        return currentId;
-      });
+      if (loadingCandidateIdRef.current === candidate.candidate_id) {
+        setSelectedCandidateFile(null);
+        setSelectedCandidateId(null);
+        show({ message: `应用模板候选失败: ${error?.message || '未知错误'}`, type: 'error' });
+      }
     }
   };
 
