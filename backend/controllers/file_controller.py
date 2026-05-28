@@ -2,7 +2,7 @@
 File Controller - handles static file serving
 """
 from flask import Blueprint, send_from_directory, current_app
-from utils import error_response, not_found
+from utils import error_response, not_found, bad_request
 from utils.path_utils import find_file_with_prefix
 import os
 from pathlib import Path
@@ -119,11 +119,19 @@ def serve_template_candidate(task_id, filename):
     GET /files/template-candidates/{task_id}/{filename} - Serve transient generated template candidates.
     """
     try:
+        if any(seq in task_id for seq in ('..', '/', '\\')):
+            return bad_request('Invalid task id')
+        if any(seq in filename for seq in ('..', '/', '\\')):
+            return bad_request('Invalid filename')
+
         safe_task_id = secure_filename(task_id)
         if safe_task_id != task_id:
-            return not_found('File')
+            return bad_request('Invalid task id')
 
         safe_filename = secure_filename(filename)
+        if safe_filename != filename:
+            return bad_request('Invalid filename')
+
         file_dir = os.path.join(
             current_app.config['UPLOAD_FOLDER'],
             'template-candidates',

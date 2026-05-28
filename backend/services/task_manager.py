@@ -1220,12 +1220,21 @@ def generate_template_candidates_task(task_id: str, style_prompt: str, prompt: s
                             candidate_error,
                             exc_info=True,
                         )
-                        raise
 
                     task = Task.query.get(task_id)
                     if task:
                         ordered_candidates = [results_by_index[i] for i in sorted(results_by_index)]
-                        task.status = 'PROCESSING' if completed < count else 'COMPLETED'
+                        is_done = (completed + failed) == count
+                        if is_done:
+                            if completed > 0:
+                                task.status = 'COMPLETED'
+                                task.error_message = None
+                            else:
+                                task.status = 'FAILED'
+                                task.error_message = 'All template candidates failed to generate.'
+                            task.completed_at = datetime.utcnow()
+                        else:
+                            task.status = 'PROCESSING'
                         task.set_progress({
                             'total': count,
                             'completed': completed,
@@ -1234,25 +1243,15 @@ def generate_template_candidates_task(task_id: str, style_prompt: str, prompt: s
                             'usage': usage,
                             'candidates': ordered_candidates,
                         })
-                        if completed == count:
-                            task.completed_at = datetime.utcnow()
                         db.session.commit()
 
-            task = Task.query.get(task_id)
-            if task:
-                task.status = 'COMPLETED'
-                task.completed_at = datetime.utcnow()
-                progress = task.get_progress()
-                progress.update({
-                    'total': count,
-                    'completed': count,
-                    'failed': 0,
-                    'prompt': prompt,
-                    'usage': usage,
-                })
-                task.set_progress(progress)
-                db.session.commit()
-                logger.info("✅ Task %s COMPLETED - generated %s template candidates", task_id, count)
+            logger.info(
+                "✅ Task %s finished template candidate generation (completed: %s, failed: %s, total: %s)",
+                task_id,
+                completed,
+                failed,
+                count,
+            )
 
         except Exception as e:
             logger.error("Task %s FAILED while generating template candidates: %s", task_id, e, exc_info=True)

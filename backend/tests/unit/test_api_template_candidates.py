@@ -112,3 +112,54 @@ class TestTemplateCandidates:
         ]
         assert elapsed < 0.5
         assert max(service.started_at) - min(service.started_at) < 0.15
+
+    def test_template_candidate_task_allows_partial_success(self, app):
+        from PIL import Image
+        from models import db, Task
+        from services.task_manager import generate_template_candidates_task
+
+        class PartiallyFailingImageService:
+            def __init__(self):
+                self.calls = 0
+
+            def generate_image(self, **kwargs):
+                self.calls += 1
+                if self.calls == 2:
+                    raise RuntimeError('provider failed for one candidate')
+                return Image.new('RGB', (100, 56), color='green')
+
+        service = PartiallyFailingImageService()
+        with app.app_context():
+            task = Task(project_id=None, task_type='GENERATE_TEMPLATE_CANDIDATES', status='PENDING')
+            task.set_progress({'total': 3, 'completed': 0, 'failed': 0, 'candidates': []})
+            db.session.add(task)
+            db.session.commit()
+            task_id = task.id
+
+        generate_template_candidates_task(
+            task_id=task_id,
+            style_prompt='minimal business blue white',
+            prompt='Generate slide template/style candidates',
+            usage='These candidates are transient slide template/style references.',
+            count=3,
+            aspect_ratio='16:9',
+            resolution='2K',
+            ai_service=service,
+            upload_folder=app.config['UPLOAD_FOLDER'],
+            app=app,
+            use_mock=False,
+        )
+
+        with app.app_context():
+            task = Task.query.get(task_id)
+            progress = task.get_progress()
+
+        assert task.status == 'COMPLETED'
+        assert progress['completed'] == 2
+        assert progress['failed'] == 1
+        assert len(progress['candidates']) == 2
+
+    def test_template_candidate_file_route_rejects_path_traversal(self, client):
+        response = client.get('/files/template-candidates/task-id/..secret.png')
+        data = assert_error_response(response, 400)
+        assert 'Invalid filename' in data['error']['message']

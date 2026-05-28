@@ -181,6 +181,10 @@ export const Home: React.FC = () => {
   const { theme, isDark, setTheme } = useTheme();
   const { initializeProject, isGlobalLoading } = useProjectStore();
   const { show, ToastContainer } = useToast();
+  const allowedDocExtensions = useMemo(
+    () => ['pdf', 'docx', 'pptx', 'doc', 'ppt', 'xlsx', 'xls', 'csv', 'txt', 'md'],
+    []
+  );
   
   const [activeTab, setActiveTab] = useState<CreationType>('idea');
   const [content, setContent] = useState('');
@@ -297,8 +301,6 @@ export const Home: React.FC = () => {
     const docFiles: File[] = [];
     const unsupportedExts: string[] = [];
 
-    const allowedDocExtensions = ['pdf', 'docx', 'pptx', 'doc', 'ppt', 'xlsx', 'xls', 'csv', 'txt', 'md'];
-
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind !== 'file') continue;
@@ -332,6 +334,44 @@ export const Home: React.FC = () => {
 
     // 不支持的文件类型提示
     if (unsupportedExts.length > 0 && !hasImages && docFiles.length === 0) {
+      show({ message: t('home.messages.unsupportedFileType', { type: unsupportedExts.join(', ') }), type: 'info' });
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const imageFiles: File[] = [];
+    const docFiles: File[] = [];
+    const unsupportedExts: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else {
+        const fileExt = file.name.split('.').pop()?.toLowerCase();
+        if (fileExt && allowedDocExtensions.includes(fileExt)) {
+          docFiles.push(file);
+        } else {
+          unsupportedExts.push(fileExt || file.type);
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      await handleImageFiles(imageFiles);
+    }
+
+    for (const file of docFiles) {
+      await handleFileUpload(file);
+    }
+
+    if (unsupportedExts.length > 0 && imageFiles.length === 0 && docFiles.length === 0) {
       show({ message: t('home.messages.unsupportedFileType', { type: unsupportedExts.join(', ') }), type: 'info' });
     }
   };
@@ -497,6 +537,10 @@ export const Home: React.FC = () => {
       setSelectedTemplate(templateFile);
       setSelectedCandidateFile(null);
       setSelectedCandidateId(null);
+    } else if (templateId) {
+      setSelectedTemplate(null);
+      setSelectedCandidateFile(null);
+      setSelectedCandidateId(null);
     }
 
     // 处理模板 ID
@@ -525,6 +569,9 @@ export const Home: React.FC = () => {
 
   const dataUrlToFile = async (dataUrl: string, filename: string): Promise<File> => {
     const response = await fetch(dataUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template candidate image: ${response.statusText}`);
+    }
     const blob = await response.blob();
     const extension = blob.type === 'image/webp' ? 'webp' : 'png';
     return new File([blob], `${filename}.${extension}`, { type: blob.type || 'image/png' });
@@ -1105,7 +1152,7 @@ export const Home: React.FC = () => {
                 onChange={setContent}
                 onPaste={handlePaste}
                 onFiles={handleImageFiles}
-                onDrop={handlePaste}
+                onDrop={handleDrop}
                 onSelectFromLibrary={() => setIsMaterialSelectorOpen(true)}
                 rows={activeTab === 'idea' ? 4 : 8}
                 className="text-sm md:text-base border-2 border-gray-200 dark:border-border-primary dark:bg-background-tertiary dark:text-white focus-within:border-banana-400 dark:focus-within:border-banana transition-colors duration-200"
