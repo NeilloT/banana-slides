@@ -2,7 +2,9 @@
 Template candidate API tests for the text-style creation flow.
 """
 
+import os
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 from conftest import assert_error_response, assert_success_response
@@ -65,6 +67,21 @@ class TestTemplateCandidates:
         response = client.post('/api/template-candidates', json=['not', 'an', 'object'])
         data = assert_error_response(response, 400)
         assert 'Invalid JSON payload' in data['error']['message']
+
+    @patch('controllers.template_controller.get_ai_service', return_value=None)
+    @patch('controllers.template_controller.task_manager.submit_task')
+    def test_create_template_candidates_requires_configured_ai_service(self, submit_task, get_ai_service, client):
+        with patch.dict(os.environ, {'USE_MOCK_AI': 'false'}):
+            response = client.post(
+                '/api/template-candidates',
+                json={'style_prompt': 'minimal business blue white', 'count': 5, 'aspect_ratio': '16:9'}
+            )
+
+        data = assert_error_response(response, 503)
+        assert data['error']['code'] == 'AI_SERVICE_UNAVAILABLE'
+        assert 'AI service is not configured' in data['error']['message']
+        get_ai_service.assert_called_once()
+        submit_task.assert_not_called()
 
     def test_template_candidate_task_generates_candidates_concurrently(self, app):
         from PIL import Image
@@ -163,6 +180,45 @@ class TestTemplateCandidates:
         assert progress['completed'] == 2
         assert progress['failed'] == 1
         assert len(progress['candidates']) == 2
+
+    def test_template_candidate_task_cleans_expired_candidate_dirs(self, app):
+        from models import db, Task
+        from services.task_manager import generate_template_candidates_task
+
+        candidate_root = Path(app.config['UPLOAD_FOLDER']) / 'template-candidates'
+        expired_dir = candidate_root / 'expired-task'
+        recent_dir = candidate_root / 'recent-task'
+        expired_dir.mkdir(parents=True, exist_ok=True)
+        recent_dir.mkdir(parents=True, exist_ok=True)
+        (expired_dir / 'candidate-1.png').write_bytes(b'expired')
+        (recent_dir / 'candidate-1.png').write_bytes(b'recent')
+        old_mtime = time.time() - (25 * 60 * 60)
+        os.utime(expired_dir / 'candidate-1.png', (old_mtime, old_mtime))
+        os.utime(expired_dir, (old_mtime, old_mtime))
+
+        with app.app_context():
+            task = Task(project_id=None, task_type='GENERATE_TEMPLATE_CANDIDATES', status='PENDING')
+            task.set_progress({'total': 1, 'completed': 0, 'failed': 0, 'candidates': []})
+            db.session.add(task)
+            db.session.commit()
+            task_id = task.id
+
+        generate_template_candidates_task(
+            task_id=task_id,
+            style_prompt='minimal business blue white',
+            prompt='Generate slide template/style candidates',
+            usage='These candidates are transient slide template/style references.',
+            count=1,
+            aspect_ratio='16:9',
+            resolution='2K',
+            ai_service=None,
+            upload_folder=app.config['UPLOAD_FOLDER'],
+            app=app,
+            use_mock=True,
+        )
+
+        assert not expired_dir.exists()
+        assert recent_dir.exists()
 
     def test_template_candidate_file_route_rejects_path_traversal(self, client):
         response = client.get('/files/template-candidates/task-id/..secret.png')

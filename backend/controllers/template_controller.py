@@ -362,6 +362,12 @@ def create_template_candidates():
         ai_service = get_ai_service()
         resolution = current_app.config.get('DEFAULT_RESOLUTION', '2K')
         use_mock = os.getenv('USE_MOCK_AI', '').lower() == 'true'
+        if not use_mock and ai_service is None:
+            return error_response(
+                'AI_SERVICE_UNAVAILABLE',
+                'AI service is not configured for template candidate generation.',
+                503,
+            )
 
         task = Task(
             project_id=None,

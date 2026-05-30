@@ -174,6 +174,21 @@ image_resource_limiter = ResourceLimiter("image", int(os.getenv('MAX_IMAGE_WORKE
 text_resource_limiter = ResourceLimiter("text", int(os.getenv('MAX_DESCRIPTION_WORKERS', '20')))
 
 
+def cleanup_template_candidate_dirs(upload_folder: str, retention_hours: int = 24):
+    """Delete transient template candidate image directories older than the retention window."""
+    root = Path(upload_folder) / 'template-candidates'
+    if not root.exists():
+        return
+
+    cutoff = time.time() - (retention_hours * 60 * 60)
+    for candidate_dir in root.iterdir():
+        try:
+            if candidate_dir.is_dir() and candidate_dir.stat().st_mtime < cutoff:
+                shutil.rmtree(candidate_dir, ignore_errors=True)
+        except OSError as cleanup_error:
+            logger.warning("Failed to clean template candidate directory %s: %s", candidate_dir, cleanup_error)
+
+
 def sync_resource_limits(description_workers: int, image_workers: int):
     """Apply the latest runtime settings to shared concurrency controls."""
     task_manager.update_max_workers(
@@ -1139,6 +1154,7 @@ def generate_template_candidates_task(task_id: str, style_prompt: str, prompt: s
             if not use_mock and ai_service is None:
                 raise ValueError("AI service is not configured for template candidate generation.")
 
+            cleanup_template_candidate_dirs(upload_folder)
             candidates_dir = Path(upload_folder) / 'template-candidates' / task_id
             candidates_dir.mkdir(parents=True, exist_ok=True)
 
