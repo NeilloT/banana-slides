@@ -1305,6 +1305,7 @@ export const Home: React.FC = () => {
                         setSelectedTemplateId(null);
                         setSelectedPresetTemplateId(null);
                       } else {
+                        setSelectedTemplate(null);
                         setTemplateCandidates([]);
                         setSelectedCandidateId(null);
                         setSelectedCandidateFile(null);

@@ -348,12 +348,12 @@ def create_template_candidates():
         if not isinstance(payload, dict):
             return bad_request('Invalid JSON payload')
 
-        style_prompt = (payload.get('style_prompt') or '').strip()
+        style_prompt = str(payload.get('style_prompt') or '').strip()
         if not style_prompt:
             return bad_request('style_prompt is required')
 
         count = _normalize_candidate_count(payload.get('count'))
-        aspect_ratio = (payload.get('aspect_ratio') or '').strip() or current_app.config.get('DEFAULT_ASPECT_RATIO', '16:9')
+        aspect_ratio = str(payload.get('aspect_ratio') or '').strip() or current_app.config.get('DEFAULT_ASPECT_RATIO', '16:9')
         if aspect_ratio not in ALLOWED_TEMPLATE_CANDIDATE_ASPECT_RATIOS:
             return bad_request(f"Invalid aspect ratio. Allowed values: {', '.join(sorted(ALLOWED_TEMPLATE_CANDIDATE_ASPECT_RATIOS))}")
 
