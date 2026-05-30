@@ -181,7 +181,13 @@ def cleanup_template_candidate_dirs(upload_folder: str, retention_hours: int = 2
         return
 
     cutoff = time.time() - (retention_hours * 60 * 60)
-    for candidate_dir in root.iterdir():
+    try:
+        candidate_dirs = list(root.iterdir())
+    except OSError as cleanup_error:
+        logger.warning("Failed to list template candidate directories under %s: %s", root, cleanup_error)
+        return
+
+    for candidate_dir in candidate_dirs:
         try:
             if candidate_dir.is_dir() and candidate_dir.stat().st_mtime < cutoff:
                 shutil.rmtree(candidate_dir, ignore_errors=True)
