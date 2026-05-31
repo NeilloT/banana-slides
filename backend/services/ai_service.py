@@ -949,7 +949,7 @@ class AIService:
                             upload_folder = get_config().UPLOAD_FOLDER
                             relative_path = ref_img[len('/files/'):].lstrip('/')
                             local_path = os.path.abspath(os.path.join(upload_folder, relative_path))
-                            if not local_path.startswith(os.path.abspath(upload_folder)):
+                            if not local_path.startswith(os.path.abspath(upload_folder) + os.sep):
                                 logger.warning(f"Path traversal attempt blocked: {ref_img}, skipping...")
                             elif os.path.exists(local_path):
                                 opened = Image.open(local_path)
