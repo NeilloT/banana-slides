@@ -597,7 +597,7 @@ test.describe('UI-driven E2E test: From user interface to PPT export', () => {
     // ====================================
     console.log('📦 Step 14: Exporting PPT file...')
     
-    const responsePromise = new Promise<{ kind: 'response', payload: any }>((resolve, reject) => {
+    const responsePromise = new Promise<{ kind: 'response', payload: { url: string, headers: Record<string, string> } }>((resolve, reject) => {
       const onResponse = (response: any) => {
         try {
           const pathname = new URL(response.url()).pathname
@@ -611,7 +611,10 @@ test.describe('UI-driven E2E test: From user interface to PPT export', () => {
             clearTimeout(timeoutId)
             resolve({
               kind: 'response' as const,
-              payload: response
+              payload: {
+                url: response.url(),
+                headers: response.headers()
+              }
             })
           }
         } catch (error) {
@@ -662,10 +665,13 @@ test.describe('UI-driven E2E test: From user interface to PPT export', () => {
     if (downloadResult.kind === 'download') {
       await downloadResult.payload.saveAs(downloadPath)
     } else {
-      const response = downloadResult.payload
-      const body = Buffer.from(await response.body())
+      const requestResponse = await page.request.get(downloadResult.payload.url)
+      if (!requestResponse.ok()) {
+        throw new Error(`Fallback export response request failed: HTTP ${requestResponse.status()}`)
+      }
+      const body = Buffer.from(await requestResponse.body())
       await fs.promises.writeFile(downloadPath, body)
-      const contentDisposition = response.headers()['content-disposition'] || ''
+      const contentDisposition = downloadResult.payload.headers['content-disposition'] || requestResponse.headers()['content-disposition'] || ''
       const filenameMatch = /filename\*?=['"]?(?:UTF-8''([^;"']+)|([^;"']+))/i.exec(contentDisposition)
       const encodedFilename = filenameMatch?.[1] || filenameMatch?.[2]
       if (encodedFilename) {
