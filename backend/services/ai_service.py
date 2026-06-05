@@ -586,7 +586,9 @@ class AIService:
             if title is None:
                 normalized["title"] = ""
             elif not isinstance(title, str):
-                normalized["title"] = str(title)
+                normalized["title"] = str(title).strip()
+            else:
+                normalized["title"] = title.strip()
 
             points = normalized.get("points", [])
             if points is None:
@@ -614,9 +616,9 @@ class AIService:
             )
 
         if has_part:
-            normalized["part"] = str(part) if part is not None else None
+            normalized["part"] = str(part).strip() if part is not None else None
         elif normalized.get("part") is not None:
-            normalized["part"] = str(normalized["part"])
+            normalized["part"] = str(normalized["part"]).strip()
 
         return normalized
 

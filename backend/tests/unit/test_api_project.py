@@ -231,6 +231,22 @@ class TestProjectOutlineStream:
         assert pages[0]['part'] == ''
         assert pages[1]['part'] is None
 
+    def test_flatten_outline_strips_title_and_part_whitespace(self):
+        """归一化时应清理标题和分组名首尾空白"""
+        from services.ai_service import AIService
+
+        service = AIService.__new__(AIService)
+
+        pages = service.flatten_outline([
+            {'title': '  直接页面  ', 'points': [], 'part': '  子页分组  '},
+            {'part': '  父级分组  ', 'pages': [{'title': '  分组页面  ', 'points': []}]},
+        ])
+
+        assert pages[0]['title'] == '直接页面'
+        assert pages[0]['part'] == '子页分组'
+        assert pages[1]['title'] == '分组页面'
+        assert pages[1]['part'] == '父级分组'
+
     def test_flatten_outline_drops_blank_points_from_ai_output(self):
         """AI 返回的空白/None 要点不应落成空 bullet 或字符串 None"""
         from services.ai_service import AIService
