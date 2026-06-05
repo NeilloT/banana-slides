@@ -568,7 +568,12 @@ class AIService:
         return outline
     
     @staticmethod
-    def _normalize_outline_page(page: Any, page_index: str, part: Optional[str] = None) -> Dict:
+    def _normalize_outline_page(
+        page: Any,
+        page_index: str,
+        part: Optional[str] = None,
+        has_part: bool = False,
+    ) -> Dict:
         if isinstance(page, str):
             title = page.strip()
             if not title:
@@ -600,8 +605,8 @@ class AIService:
                 f"Outline page {page_index} must be an object or string, got {type(page).__name__}"
             )
 
-        if part:
-            normalized["part"] = str(part)
+        if has_part:
+            normalized["part"] = str(part) if part is not None else None
         elif normalized.get("part") is not None:
             normalized["part"] = str(normalized["part"])
 
@@ -634,6 +639,7 @@ class AIService:
                             page,
                             f"{item_index}.pages[{page_index}]",
                             part=item["part"],
+                            has_part=True,
                         )
                     )
             else:

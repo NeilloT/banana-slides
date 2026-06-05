@@ -217,6 +217,20 @@ class TestResourceConcurrency:
 class TestProjectOutlineStream:
     """流式大纲生成测试"""
 
+    def test_flatten_outline_preserves_falsy_parent_part_values(self):
+        """父级 part 即使是空字符串或 None，也应像旧逻辑一样覆盖子页 part"""
+        from services.ai_service import AIService
+
+        service = AIService.__new__(AIService)
+
+        pages = service.flatten_outline([
+            {'part': '', 'pages': [{'title': '空分组', 'points': []}]},
+            {'part': None, 'pages': [{'title': '无分组', 'points': [], 'part': '子页分组'}]},
+        ])
+
+        assert pages[0]['part'] == ''
+        assert pages[1]['part'] is None
+
     def test_from_description_normalizes_string_outline_pages_after_count_mismatch(self, client, app, monkeypatch):
         """从描述生成应兼容 AI 返回字符串页，并在页数不匹配时不因 page_data.get 崩溃"""
         response = client.post('/api/projects', json={
