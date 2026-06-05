@@ -622,7 +622,7 @@ class AIService:
 
         return normalized
 
-    def flatten_outline(self, outline: List[Dict]) -> List[Dict]:
+    def flatten_outline(self, outline: List[Union[Dict[str, Any], str]]) -> List[Dict[str, Any]]:
         """
         Flatten outline structure to page list
         Based on demo.py flatten_outline()
