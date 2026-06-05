@@ -231,6 +231,22 @@ class TestProjectOutlineStream:
         assert pages[0]['part'] == ''
         assert pages[1]['part'] is None
 
+    def test_flatten_outline_drops_blank_points_from_ai_output(self):
+        """AI 返回的空白/None 要点不应落成空 bullet 或字符串 None"""
+        from services.ai_service import AIService
+
+        service = AIService.__new__(AIService)
+
+        pages = service.flatten_outline([
+            {'title': '清理要点', 'points': ['  有效要点  ', None, '', '   ']},
+            {'title': '字符串要点', 'points': '  单个要点  '},
+            {'title': '空字符串要点', 'points': '   '},
+        ])
+
+        assert pages[0]['points'] == ['有效要点']
+        assert pages[1]['points'] == ['单个要点']
+        assert pages[2]['points'] == []
+
     def test_from_description_normalizes_string_outline_pages_after_count_mismatch(self, client, app, monkeypatch):
         """从描述生成应兼容 AI 返回字符串页，并在页数不匹配时不因 page_data.get 崩溃"""
         response = client.post('/api/projects', json={

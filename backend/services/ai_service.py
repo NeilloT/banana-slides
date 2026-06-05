@@ -592,10 +592,18 @@ class AIService:
             if points is None:
                 normalized["points"] = []
             elif isinstance(points, list):
-                normalized["points"] = [str(point) for point in points]
+                normalized["points"] = [
+                    str(point).strip()
+                    for point in points
+                    if point is not None and str(point).strip()
+                ]
             elif isinstance(points, str):
-                logger.warning("Normalizing string outline points at %s", page_index)
-                normalized["points"] = [points]
+                stripped_point = points.strip()
+                if stripped_point:
+                    logger.warning("Normalizing string outline points at %s", page_index)
+                    normalized["points"] = [stripped_point]
+                else:
+                    normalized["points"] = []
             else:
                 raise ValueError(
                     f"Outline page {page_index} points must be a list or string, got {type(points).__name__}"
