@@ -38,6 +38,17 @@ _MINERU_AUTH_TERMS = (
     "权限",
 )
 
+
+def _contains_word_or_phrase(text: str, phrase: str) -> bool:
+    """Match term on word boundaries for ASCII phrases, with full fallback for non-ASCII."""
+    if not phrase:
+        return False
+
+    if all(ord(ch) < 128 for ch in phrase):
+        return bool(re.search(rf"\b{re.escape(phrase)}\b", text))
+
+    return phrase in text
+
 _MINERU_AUTH_FAILURE_TERMS = (
     "expired",
     "invalid",
@@ -116,8 +127,8 @@ def _looks_like_mineru_auth_error(text: str | None, status_code: int | None = No
     if not normalized:
         return False
 
-    has_auth_term = any(term in normalized for term in _MINERU_AUTH_TERMS)
-    has_failure_term = any(term in normalized for term in _MINERU_AUTH_FAILURE_TERMS)
+    has_auth_term = any(_contains_word_or_phrase(normalized, term) for term in _MINERU_AUTH_TERMS)
+    has_failure_term = any(_contains_word_or_phrase(normalized, term) for term in _MINERU_AUTH_FAILURE_TERMS)
     return has_auth_term and has_failure_term
 
 

@@ -209,6 +209,12 @@ def test_looks_like_mineru_auth_error_detects_auth_failed_text():
     assert _looks_like_mineru_auth_error("auth failed") is True
 
 
+def test_looks_like_mineru_auth_error_uses_word_boundaries():
+    """Substring matches such as 'tokenize' should not be treated as a token auth error."""
+    assert _looks_like_mineru_auth_error("text tokenization service failed") is False
+    assert _looks_like_mineru_auth_error("authentic tokenization failed") is False
+
+
 def test_poll_result_maps_http_auth_failure_without_retrying():
     """Polling should fail immediately with a specific MinerU credential message."""
     service = FileParserService(mineru_token='expired-token')
