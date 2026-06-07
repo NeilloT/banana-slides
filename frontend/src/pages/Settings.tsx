@@ -652,13 +652,13 @@ export const Settings: React.FC = () => {
             setOauthConnecting(false);
             if (event.data.success) {
               const statusResp = await api.getOpenAIOAuthStatus();
-              if (statusResp.success && statusResp.data) {
-                setSettings(prev => prev ? {
-                  ...prev,
-                  openai_oauth_connected: statusResp.data!.connected,
-                  openai_oauth_account_id: statusResp.data!.account_id || undefined,
-                } : prev);
-              }
+      if (statusResp.success && statusResp.data) {
+        setSettings(prev => prev ? {
+          ...prev,
+          openai_oauth_connected: statusResp.data!.connected,
+          openai_oauth_account_id: statusResp.data!.account_id || null,
+        } : prev);
+      }
             } else {
               show({ message: t('settings.openaiOAuth.connectFailed'), type: 'error' });
             }
@@ -686,7 +686,7 @@ export const Settings: React.FC = () => {
         setSettings(prev => prev ? {
           ...prev,
           openai_oauth_connected: false,
-          openai_oauth_account_id: undefined,
+          openai_oauth_account_id: null,
         } : prev);
         show({ message: t('settings.openaiOAuth.disconnectSuccess'), type: 'success' });
       }
@@ -708,7 +708,7 @@ export const Settings: React.FC = () => {
           setSettings(prev => prev ? {
             ...prev,
             openai_oauth_connected: statusResp.data!.connected,
-            openai_oauth_account_id: statusResp.data!.account_id || undefined,
+            openai_oauth_account_id: statusResp.data!.account_id || null,
           } : prev);
         }
         show({ message: t('settings.openaiOAuth.manualCallbackSuccess'), type: 'success' });
@@ -904,7 +904,7 @@ export const Settings: React.FC = () => {
       const next = {
         ...prev,
         openai_oauth_connected: false,
-        openai_oauth_account_id: undefined,
+        openai_oauth_account_id: null,
       };
       sessionStorage.setItem('banana-settings', JSON.stringify(next));
       return next;

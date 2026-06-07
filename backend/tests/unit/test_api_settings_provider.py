@@ -126,7 +126,7 @@ def test_codex_401_settings_test_disconnects_oauth_and_reports_state(client, app
 
 
 def test_unrelated_401_settings_test_does_not_disconnect_codex_oauth(client, app):
-    """A non-Codex service test should not clear OAuth just because Codex is configured elsewhere."""
+    """A non-Codex service test should not clear OAuth just because Codex is configured globally."""
     with app.app_context():
         from models import Settings, Task, db
 
@@ -157,7 +157,7 @@ def test_unrelated_401_settings_test_does_not_disconnect_codex_oauth(client, app
             settings_controller._run_test_async(
                 task_id,
                 'baidu-ocr',
-                {'text_model_source': 'codex'},
+                {'ai_provider_format': 'codex'},
                 app,
             )
 

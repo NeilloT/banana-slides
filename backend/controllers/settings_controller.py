@@ -1060,10 +1060,13 @@ def _is_codex_oauth_unauthorized(error: Exception, test_name: str, test_settings
         "caption-model": "image_caption_model_source",
     }
     source_key = test_source_keys.get(test_name)
-    source = test_settings.get(source_key) if source_key else None
-    if source is None:
-        source = test_settings.get("ai_provider_format")
-    is_codex_test = str(source).lower() == "codex" if source else False
+    if source_key:
+        source = test_settings.get(source_key)
+        if source is None:
+            source = test_settings.get("ai_provider_format")
+        is_codex_test = str(source).lower() == "codex" if source else False
+    else:
+        is_codex_test = False
     is_codex_endpoint = "chatgpt.com/backend-api/codex" in error_text or "/codex/responses" in error_text
     return is_codex_test or is_codex_endpoint
 
