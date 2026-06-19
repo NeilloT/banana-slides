@@ -119,6 +119,87 @@ test.describe('Home outline SSE handoff', () => {
     expect(syncCalled).toBe(false)
   })
 
+  test('from outline accepts a completed reference file without typed text', async ({ page }) => {
+    const referenceFile = {
+      id: 'file-outline-1',
+      filename: 'teaching-outline.docx',
+      file_size: 20480,
+      file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      parse_status: 'completed',
+    }
+    let createdPayload: Record<string, any> | undefined
+    let associatedProjectId: string | undefined
+
+    await page.route('**/api/reference-files/upload', route =>
+      route.fulfill({ json: { success: true, data: { file: referenceFile } } })
+    )
+
+    await page.route(`**/api/reference-files/${referenceFile.id}/associate`, async (route) => {
+      associatedProjectId = route.request().postDataJSON().project_id
+      await route.fulfill({
+        json: { success: true, data: { file: { ...referenceFile, project_id: associatedProjectId } } },
+      })
+    })
+
+    await page.route('**/api/projects', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue()
+        return
+      }
+
+      createdPayload = route.request().postDataJSON()
+      const projectId = `project-${Object.keys(projects).length + 1}`
+      projects[projectId] = {
+        id: projectId,
+        project_id: projectId,
+        creation_type: createdPayload.creation_type,
+        outline_text: createdPayload.outline_text,
+        status: 'DRAFT',
+        pages: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      await route.fulfill({
+        status: 201,
+        json: { success: true, data: { project_id: projectId, status: 'DRAFT', pages: [] } },
+      })
+    })
+
+    await page.route('**/api/projects/*/generate/outline/stream', async (route) => {
+      const projectId = new URL(route.request().url()).pathname.split('/')[3]
+      const pages = [{ index: 0, title: '文件大纲页', points: ['来自解析文件'] }]
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: ssePage(pages[0]) + sseDone(projectId, pages),
+      })
+    })
+
+    await page.goto('/')
+    await page.getByRole('button', { name: /从大纲生成|From Outline/ }).click()
+
+    const editor = page.getByRole('textbox').first()
+    await expect(editor).toBeVisible({ timeout: 10_000 })
+    await editor.evaluate((el) => {
+      const file = new File(['fake-docx-bytes'], 'teaching-outline.docx', {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      })
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+      el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }))
+    })
+
+    await expect(page.getByText('teaching-outline.docx')).toBeVisible({ timeout: 5_000 })
+    await page.getByRole('button', { name: /下一步|Next/ }).click()
+
+    await expect(page).toHaveURL(/\/project\/project-1\/outline/)
+    await expect(page.getByText('文件大纲页')).toBeVisible({ timeout: 5000 })
+    expect(createdPayload?.creation_type).toBe('outline')
+    expect(createdPayload?.outline_text).toContain('参考文件')
+    expect(associatedProjectId).toBe('project-1')
+  })
+
   test('from description streams outline and bound page description on the outline editor', async ({ page }) => {
     let streamCalled = false
     let syncDescriptionCalled = false

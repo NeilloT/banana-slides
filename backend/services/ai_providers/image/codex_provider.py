@@ -32,6 +32,8 @@ _DEFAULT_TIMEOUT = 180  # image generation can be slow
 
 def _is_retryable_http_error(exc: BaseException) -> bool:
     """Return True for transient HTTP/network errors worth retrying."""
+    if isinstance(exc, RetryableNoImageError):
+        return True
     if isinstance(exc, http_requests.exceptions.HTTPError) and exc.response is not None:
         return exc.response.status_code in (429, 500, 502, 503, 504)
     if isinstance(exc, (
@@ -52,6 +54,10 @@ def _log_codex_retry(retry_state):
         "Codex image request failed (%s, HTTP %s), retrying %d/%d: %s",
         exc_type, status, retry_state.attempt_number, 5, exc,
     )
+
+
+class RetryableNoImageError(ValueError):
+    """Codex returned a successful stream, but no image payload was present."""
 
 
 class CodexImageProvider(ImageProvider):
@@ -164,6 +170,8 @@ class CodexImageProvider(ImageProvider):
         full response object as a fallback.
         """
         completed_data = None
+        latest_partial_image = None
+        event_types = []
 
         for raw_line in resp.iter_lines():
             line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
@@ -178,6 +186,11 @@ class CodexImageProvider(ImageProvider):
                 continue
 
             event_type = event.get("type", "")
+            if event_type:
+                event_types.append(event_type)
+
+            if event_type == "response.image_generation_call.partial_image":
+                latest_partial_image = event.get("partial_image_b64") or event.get("partial_image")
 
             # Direct image result in a delta or output item event
             if event_type in (
@@ -195,9 +208,26 @@ class CodexImageProvider(ImageProvider):
 
         # Fallback: parse the completed response
         if completed_data:
-            return self._extract_image_from_response(completed_data)
+            try:
+                return self._extract_image_from_response(completed_data)
+            except ValueError:
+                if latest_partial_image:
+                    return self._decode_base64_image(latest_partial_image)
+                logger.warning(
+                    "Codex image stream completed without image; event_types=%s response=%s",
+                    event_types[-20:],
+                    str(completed_data)[:1000],
+                )
+                raise RetryableNoImageError("No image found in Codex Responses API stream")
 
-        raise ValueError("No image found in Codex Responses API stream")
+        if latest_partial_image:
+            return self._decode_base64_image(latest_partial_image)
+
+        logger.warning(
+            "Codex image stream ended without image or completed payload; event_types=%s",
+            event_types[-20:],
+        )
+        raise RetryableNoImageError("No image found in Codex Responses API stream")
 
     def _try_extract_image(self, item: dict) -> Optional[Image.Image]:
         """Try to decode an image from a single output item."""

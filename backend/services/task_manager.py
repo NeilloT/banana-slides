@@ -910,7 +910,14 @@ def generate_single_page_image_task(task_id: str, project_id: str, page_id: str,
             # Update page status
             page = Page.query.get(page_id)
             if page:
-                page.status = 'FAILED'
+                if page.generated_image_path:
+                    logger.warning(
+                        "Task %s failed after page %s already had an image; preserving page status",
+                        task_id,
+                        page_id,
+                    )
+                else:
+                    page.status = 'FAILED'
                 db.session.commit()
 
 

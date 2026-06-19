@@ -84,6 +84,54 @@ def _make_ok_sse_response():
     return resp
 
 
+def _make_partial_image_sse_response():
+    """Simulate Codex returning the generated image only as a partial image event."""
+    import base64
+    import json
+    from io import BytesIO
+    from PIL import Image
+
+    img = Image.new("RGB", (100, 100), "green")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode()
+
+    events = [
+        {"type": "response.image_generation_call.partial_image", "partial_image_b64": b64},
+        {"type": "response.output_item.done", "item": {"type": "image_generation_call"}},
+        {"type": "response.completed", "response": {"output": []}},
+    ]
+
+    resp = MagicMock(spec=requests.Response)
+    resp.status_code = 200
+    resp.raise_for_status = MagicMock()
+    resp.iter_lines.return_value = [
+        f"data: {json.dumps(event)}".encode()
+        for event in events
+    ] + [b"data: [DONE]"]
+    return resp
+
+
+def _make_no_image_sse_response():
+    """Simulate a transient successful SSE stream that contains no image payload."""
+    import json
+
+    events = [
+        {"type": "response.created", "response": {"id": "resp-empty"}},
+        {"type": "response.output_item.done", "item": {"type": "image_generation_call"}},
+        {"type": "response.completed", "response": {"output": []}},
+    ]
+
+    resp = MagicMock(spec=requests.Response)
+    resp.status_code = 200
+    resp.raise_for_status = MagicMock()
+    resp.iter_lines.return_value = [
+        f"data: {json.dumps(event)}".encode()
+        for event in events
+    ] + [b"data: [DONE]"]
+    return resp
+
+
 def _make_error_response(status):
     resp = MagicMock(spec=requests.Response)
     resp.status_code = status
@@ -134,6 +182,22 @@ class TestGenerateImageRetry:
             result = _provider().generate_image("a blue square")
             assert result is not None
             assert mock_post.call_count == 1
+
+    def test_uses_partial_image_when_completed_output_is_empty(self):
+        ok = _make_partial_image_sse_response()
+        with patch.object(_codex_img.http_requests, "post", return_value=ok) as mock_post:
+            result = _provider().generate_image("a green square")
+            assert result is not None
+            assert result.size == (100, 100)
+            assert mock_post.call_count == 1
+
+    def test_retries_when_successful_stream_has_no_image_then_succeeds(self):
+        empty = _make_no_image_sse_response()
+        ok = _make_ok_sse_response()
+        with patch.object(_codex_img.http_requests, "post", side_effect=[empty, ok]) as mock_post:
+            result = _provider().generate_image("a blue square")
+            assert result is not None
+            assert mock_post.call_count == 2
 
     def test_retries_on_429_then_succeeds(self):
         err = _make_error_response(429)

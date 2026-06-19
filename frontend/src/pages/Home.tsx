@@ -551,13 +551,19 @@ export const Home: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    const completedReferenceFiles = referenceFiles.filter(f => f.parse_status === 'completed');
+    const hasCompletedReferenceFiles = completedReferenceFiles.length > 0;
+    const hasTypedContent = Boolean(content.trim());
+    const canUseReferenceFilesAsInput =
+      hasCompletedReferenceFiles && (activeTab === 'idea' || activeTab === 'outline' || activeTab === 'description');
+
     // For ppt_renovation, validate file instead of content
     if (activeTab === 'ppt_renovation') {
       if (!renovationFile) {
         show({ message: t('home.renovation.uploadFile'), type: 'error' });
         return;
       }
-    } else if (!content.trim()) {
+    } else if (!hasTypedContent && !canUseReferenceFilesAsInput) {
       show({ message: t('home.messages.enterContent'), type: 'error' });
       return;
     }
@@ -623,11 +629,17 @@ export const Home: React.FC = () => {
       const styleDesc = templateStyle.trim() ? templateStyle.trim() : undefined;
 
       // 传递参考文件ID列表，确保 AI 生成时能读取参考文件内容
-      const refFileIds = referenceFiles
-        .filter(f => f.parse_status === 'completed')
-        .map(f => f.id);
+      const refFileIds = completedReferenceFiles.map(f => f.id);
 
-      await initializeProject(activeTab as 'idea' | 'outline' | 'description', content, templateFile || undefined, styleDesc, refFileIds.length > 0 ? refFileIds : undefined, aspectRatio);
+      const contentForProject = hasTypedContent
+        ? content
+        : activeTab === 'description'
+          ? '请基于已上传并解析完成的参考文件内容，生成完整的逐页 PPT 描述。'
+          : activeTab === 'outline'
+            ? '请基于已上传并解析完成的参考文件内容，整理并生成结构化 PPT 大纲。'
+            : '请基于已上传并解析完成的参考文件内容，生成一份完整的 PPT。';
+
+      await initializeProject(activeTab as 'idea' | 'outline' | 'description', contentForProject, templateFile || undefined, styleDesc, refFileIds.length > 0 ? refFileIds : undefined, aspectRatio);
       
       // 根据类型跳转到不同页面
       const projectId = localStorage.getItem('currentProjectId');
@@ -1080,8 +1092,9 @@ export const Home: React.FC = () => {
                   onClick={handleSubmit}
                   loading={isSubmitting || isGlobalLoading}
                   disabled={
-                    !content.trim() ||
+                    (!content.trim() && !referenceFiles.some(f => f.parse_status === 'completed')) ||
                     isUploadingImage ||
+                    isUploadingFile ||
                     referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
                   }
                   className="shadow-sm dark:shadow-background-primary/30 text-xs md:text-sm px-3 md:px-4"
