@@ -219,7 +219,7 @@ If you are using **Windows or macOS**, please first [install **Docker Desktop**]
 
 0. **Clone the Repository**
 ```bash
-git clone https://github.com/Anionex/banana-slides
+git clone https://github.com/NeilloT/banana-slides
 cd banana-slides
 ```
 
@@ -427,7 +427,7 @@ docker compose up -d
 
 0. **Clone the repository**
 ```bash
-git clone https://github.com/Anionex/banana-slides
+git clone https://github.com/NeilloT/banana-slides
 cd banana-slides
 ```
 
