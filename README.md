@@ -227,7 +227,7 @@
 
 0. **克隆代码仓库**
 ```bash
-git clone https://github.com/Anionex/banana-slides
+git clone https://github.com/NeilloT/banana-slides
 cd banana-slides
 ```
 
@@ -413,7 +413,7 @@ docker compose up -d
 
 0. **克隆代码仓库**
 ```bash
-git clone https://github.com/Anionex/banana-slides
+git clone https://github.com/NeilloT/banana-slides
 cd banana-slides
 ```
 
